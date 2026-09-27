@@ -1,6 +1,6 @@
 # Public API design
 
-This document defines a proposed HTTP contract for implementation planning. It deliberately does not choose a web framework or database.
+This document defines the proposed HTTP contract for v1 implementation planning. The machine-readable contract is [`openapi/openapi.yaml`](../openapi/openapi.yaml), and the review criteria are in the [v1 API contract specification](../specs/api-v1-contract.md). Both remain proposals until approved. They deliberately do not choose a database or persistence strategy.
 
 ## Resource style
 
@@ -65,6 +65,8 @@ Examples:
 ```text
 GET /v1/characters/monkey-d-luffy?include=bounties,organizations,devilFruits,haki
 GET /v1/organizations/straw-hat-pirates?include=members,relationships,locations
+GET /v1/volumes/1?include=chapters,editions
+GET /v1/cover-stories/dawns-romance?include=episodes
 ```
 
 Unknown includes return `400` with allowed values. Every include has bounded depth and uses the request's language, temporal and spoiler context. A future `organizations.ancestors` include may expose derived effective affiliations; default organization membership remains direct only.

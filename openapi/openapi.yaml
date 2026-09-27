@@ -1,0 +1,1619 @@
+openapi: 3.1.1
+info:
+  title: DenDenAPI
+  version: 1.0.0
+  summary: Proposed public REST API for structured One Piece data
+  description: |
+    Proposed v1 contract for review. This API is not implemented yet.
+    The API exposes manga-first structured facts with language selection,
+    historical views, spoiler caps, and compact official source references.
+    DenDenAPI is an unofficial fan project; see the repository NOTICE.
+  license:
+    name: Apache-2.0
+    identifier: Apache-2.0
+servers:
+  - url: http://localhost:8080
+    description: Local development
+tags:
+  - name: Metadata
+  - name: Characters
+  - name: Organizations
+  - name: World
+  - name: Story
+  - name: Sources
+paths:
+  /v1/meta:
+    get:
+      operationId: getMetadata
+      tags: [Metadata]
+      summary: Get dataset and API metadata
+      responses:
+        '200':
+          description: Dataset metadata
+          headers:
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+            Vary:
+              $ref: '#/components/headers/LanguageVary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metadata'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/characters:
+    get:
+      operationId: listCharacters
+      tags: [Characters]
+      summary: List visible characters
+      description: Hidden characters are omitted. Pagination never exposes hidden records.
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+        - name: organization
+          in: query
+          description: Filter by the stable slug of a direct organization membership.
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/CharacterCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/characters/{slug}:
+    get:
+      operationId: getCharacter
+      tags: [Characters]
+      summary: Get a character by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          description: Character projection
+          headers:
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+            Vary:
+              $ref: '#/components/headers/LanguageVary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Character'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/organizations:
+    get:
+      operationId: listOrganizations
+      tags: [Organizations]
+      summary: List visible organizations
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+        - name: type
+          in: query
+          description: Filter by organization type.
+          schema:
+            $ref: '#/components/schemas/OrganizationType'
+      responses:
+        '200':
+          $ref: '#/components/responses/OrganizationCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/organizations/{slug}:
+    get:
+      operationId: getOrganization
+      tags: [Organizations]
+      summary: Get an organization by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          description: Organization projection
+          headers:
+            Content-Language:
+              $ref: '#/components/headers/ContentLanguage'
+            Vary:
+              $ref: '#/components/headers/LanguageVary'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Organization'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/races:
+    get:
+      operationId: listRaces
+      tags: [World]
+      summary: List visible races
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+      responses:
+        '200':
+          $ref: '#/components/responses/RaceCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/races/{slug}:
+    get:
+      operationId: getRace
+      tags: [World]
+      summary: Get a race by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Race'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/locations:
+    get:
+      operationId: listLocations
+      tags: [World]
+      summary: List visible locations
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+      responses:
+        '200':
+          $ref: '#/components/responses/LocationCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/locations/{slug}:
+    get:
+      operationId: getLocation
+      tags: [World]
+      summary: Get a location by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Location'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/devil-fruits:
+    get:
+      operationId: listDevilFruits
+      tags: [World]
+      summary: List visible Devil Fruits
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+      responses:
+        '200':
+          $ref: '#/components/responses/DevilFruitCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/devil-fruits/{slug}:
+    get:
+      operationId: getDevilFruit
+      tags: [World]
+      summary: Get a Devil Fruit by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/DevilFruit'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/sagas:
+    get:
+      operationId: listSagas
+      tags: [Story]
+      summary: List visible sagas
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+      responses:
+        '200':
+          $ref: '#/components/responses/SagaCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/sagas/{slug}:
+    get:
+      operationId: getSaga
+      tags: [Story]
+      summary: Get a saga by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Saga'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/arcs:
+    get:
+      operationId: listArcs
+      tags: [Story]
+      summary: List visible arcs
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+        - name: saga
+          in: query
+          description: Filter by the stable slug of the containing saga.
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ArcCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/arcs/{slug}:
+    get:
+      operationId: getArc
+      tags: [Story]
+      summary: Get an arc by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Arc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/chapters:
+    get:
+      operationId: listChapters
+      tags: [Story]
+      summary: List visible manga chapters
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortByNumber'
+        - name: arc
+          in: query
+          description: Filter by the stable slug of the primary arc.
+          schema:
+            type: string
+      responses:
+        '200':
+          $ref: '#/components/responses/ChapterCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/chapters/{number}:
+    get:
+      operationId: getChapter
+      tags: [Story]
+      summary: Get a manga chapter by its main-series number
+      parameters:
+        - name: number
+          in: path
+          required: true
+          description: Positive number in the main manga sequence.
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Chapter'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/volumes:
+    get:
+      operationId: listVolumes
+      tags: [Story]
+      summary: List visible manga volumes
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortByNumber'
+      responses:
+        '200':
+          $ref: '#/components/responses/VolumeCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/volumes/{number}:
+    get:
+      operationId: getVolume
+      tags: [Story]
+      summary: Get a volume by number
+      parameters:
+        - name: number
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/Volume'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/cover-stories:
+    get:
+      operationId: listCoverStories
+      tags: [Story]
+      summary: List visible cover stories
+      parameters:
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+        - $ref: '#/components/parameters/PageLimit'
+        - $ref: '#/components/parameters/PageCursor'
+        - $ref: '#/components/parameters/SortBySlug'
+      responses:
+        '200':
+          $ref: '#/components/responses/CoverStoryCollection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/cover-stories/{slug}:
+    get:
+      operationId: getCoverStory
+      tags: [Story]
+      summary: Get a cover story by stable slug
+      parameters:
+        - $ref: '#/components/parameters/Slug'
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+        - $ref: '#/components/parameters/Include'
+      responses:
+        '200':
+          $ref: '#/components/responses/CoverStory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /v1/sources/{id}:
+    get:
+      operationId: getSource
+      tags: [Sources]
+      summary: Get a compact official source reference
+      description: Source responses contain bibliographic references, not copyrighted source text.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/Language'
+        - $ref: '#/components/parameters/AcceptLanguage'
+        - $ref: '#/components/parameters/AsOfChapter'
+        - $ref: '#/components/parameters/MaxChapter'
+      responses:
+        '200':
+          $ref: '#/components/responses/Source'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+components:
+  parameters:
+    Slug:
+      name: slug
+      in: path
+      required: true
+      description: Stable, non-localized resource identifier.
+      schema:
+        type: string
+        minLength: 1
+    Language:
+      name: lang
+      in: query
+      description: Explicit language override. If omitted, Accept-Language is considered. Fields fall back to the base language and then English.
+      schema:
+        type: string
+        examples: [en, es, es-ES, ja]
+    AcceptLanguage:
+      name: Accept-Language
+      in: header
+      description: Used when `lang` is absent. Resolved values are reported in `Content-Language`.
+      schema:
+        type: string
+    AsOfChapter:
+      name: asOfChapter
+      in: query
+      description: Select facts valid at this chapter in the story timeline.
+      schema:
+        type: integer
+        minimum: 1
+    MaxChapter:
+      name: maxChapter
+      in: query
+      description: Hide facts that are not safely available to a reader through this chapter.
+      schema:
+        type: integer
+        minimum: 1
+    Include:
+      name: include
+      in: query
+      description: |
+        Comma-separated route-specific allowlist of bounded related resources.
+        Characters accept bounties, organizations, devilFruits, haki, statusHistory, and sources.
+        Organizations accept members, relationships, locations, statusHistory, and sources.
+        Volumes accept chapters and editions. Cover stories accept episodes.
+        Other routes do not currently define includes. Unsupported values return a problem response.
+      style: form
+      explode: false
+      schema:
+        type: array
+        items:
+          type: string
+          enum:
+            - bounties
+            - organizations
+            - devilFruits
+            - haki
+            - members
+            - relationships
+            - locations
+            - statusHistory
+            - sources
+            - chapters
+            - editions
+            - episodes
+    PageLimit:
+      name: page[limit]
+      in: query
+      description: Maximum number of items in this page.
+      schema:
+        type: integer
+        default: 20
+        minimum: 1
+        maximum: 100
+    PageCursor:
+      name: page[cursor]
+      in: query
+      description: Opaque cursor bound to the current query, locale, and temporal filters.
+      schema:
+        type: string
+    SortBySlug:
+      name: sort
+      in: query
+      description: Sort this collection by its stable slug in ascending order.
+      schema:
+        type: string
+        enum: [slug]
+    SortByNumber:
+      name: sort
+      in: query
+      description: Sort this collection by its main-series number in ascending order.
+      schema:
+        type: string
+        enum: [number]
+
+  headers:
+    ContentLanguage:
+      description: Comma-separated locales actually used by localized fields, ordered by fallback priority.
+      schema:
+        type: string
+        examples: ["es, en", en]
+    LanguageVary:
+      description: Responses selected using Accept-Language vary on that header.
+      schema:
+        type: string
+        example: Accept-Language
+
+  responses:
+    BadRequest:
+      description: Invalid language, query parameter, filter, or include value.
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    NotFound:
+      description: The resource is unknown or hidden by spoiler filtering.
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    RateLimited:
+      description: Request rate limit exceeded.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    ServerError:
+      description: Unexpected server failure without internal details.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/Problem'
+    CharacterCollection:
+      description: Paginated visible characters
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CharacterCollection'
+    OrganizationCollection:
+      description: Paginated visible organizations
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/OrganizationCollection'
+    RaceCollection:
+      description: Paginated visible races
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/RaceCollection'
+    LocationCollection:
+      description: Paginated visible locations
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/LocationCollection'
+    DevilFruitCollection:
+      description: Paginated visible Devil Fruits
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DevilFruitCollection'
+    SagaCollection:
+      description: Paginated visible sagas
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/SagaCollection'
+    ArcCollection:
+      description: Paginated visible arcs
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ArcCollection'
+    ChapterCollection:
+      description: Paginated visible manga chapters
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ChapterCollection'
+    VolumeCollection:
+      description: Paginated visible volumes
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/VolumeCollection'
+    CoverStoryCollection:
+      description: Paginated visible cover stories
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CoverStoryCollection'
+    Character:
+      description: Character projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Character'
+    Organization:
+      description: Organization projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Organization'
+    Race:
+      description: Race projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Race'
+    Location:
+      description: Location projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Location'
+    DevilFruit:
+      description: Devil Fruit projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/DevilFruit'
+    Saga:
+      description: Saga projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Saga'
+    Arc:
+      description: Arc projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Arc'
+    Chapter:
+      description: Chapter projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Chapter'
+    Volume:
+      description: Volume projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Volume'
+    CoverStory:
+      description: Cover story projection
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/CoverStory'
+    Source:
+      description: Compact official source reference
+      headers:
+        Content-Language:
+          $ref: '#/components/headers/ContentLanguage'
+        Vary:
+          $ref: '#/components/headers/LanguageVary'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Source'
+
+  schemas:
+    Problem:
+      type: object
+      required: [type, title, status, detail, instance]
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        instance:
+          type: string
+          format: uri-reference
+
+    Metadata:
+      type: object
+      required: [apiVersion, datasetVersion, generatedAt, maxIngestedChapter, supportedLocales]
+      properties:
+        apiVersion:
+          type: string
+          examples: ['1']
+        datasetVersion:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        maxIngestedChapter:
+          type: integer
+          minimum: 0
+        supportedLocales:
+          type: array
+          items:
+            type: string
+          examples: [[en, es]]
+
+    Page:
+      type: object
+      required: [nextCursor]
+      properties:
+        nextCursor:
+          type: [string, 'null']
+
+    LocalizedResource:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+          description: Opaque, immutable resource identity.
+        slug:
+          type: string
+          description: Stable, non-localized public identifier.
+        name:
+          type: string
+          description: Name resolved for this response's language selection.
+        description:
+          type: [string, 'null']
+          description: Localized editorial summary, when available.
+
+    ResourceReference:
+      type: object
+      required: [id, slug, name]
+      properties:
+        id:
+          type: string
+        slug:
+          type: string
+        name:
+          type: string
+
+    Character:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          properties:
+            aliases:
+              type: array
+              items:
+                type: string
+            epithets:
+              type: array
+              items:
+                type: string
+            gender:
+              $ref: '#/components/schemas/CharacterGender'
+            birthday:
+              $ref: '#/components/schemas/Birthday'
+            age:
+              type: integer
+              minimum: 0
+            heightCm:
+              type: integer
+              minimum: 0
+            status:
+              $ref: '#/components/schemas/CharacterStatus'
+            races:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResourceReference'
+            origin:
+              $ref: '#/components/schemas/ResourceReference'
+            debut:
+              $ref: '#/components/schemas/ChapterReference'
+            bounties:
+              type: array
+              description: Present when requested using the bounties include.
+              items:
+                $ref: '#/components/schemas/Bounty'
+            organizations:
+              type: array
+              description: Direct memberships visible under the request filters.
+              items:
+                $ref: '#/components/schemas/ResourceReference'
+            devilFruits:
+              type: array
+              items:
+                $ref: '#/components/schemas/ResourceReference'
+            haki:
+              type: array
+              items:
+                type: string
+                enum: [OBSERVATION, ARMAMENT, SUPREME_KING]
+            statusHistory:
+              type: array
+              items:
+                $ref: '#/components/schemas/CharacterStatusRecord'
+            sources:
+              type: array
+              items:
+                $ref: '#/components/schemas/Source'
+
+    CharacterGender:
+      type: string
+      enum: [MALE, FEMALE, NON_BINARY, UNKNOWN, NOT_APPLICABLE]
+
+    CharacterStatus:
+      type: string
+      enum: [ALIVE, DEAD, UNKNOWN]
+
+    CharacterStatusRecord:
+      type: object
+      required: [status, availableFromChapter]
+      properties:
+        status:
+          $ref: '#/components/schemas/CharacterStatus'
+        validFromChapter:
+          type: integer
+          minimum: 1
+        validToChapter:
+          type: integer
+          minimum: 1
+        availableFromChapter:
+          type: integer
+          minimum: 1
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+
+    Birthday:
+      type: object
+      required: [month, day]
+      properties:
+        month:
+          type: integer
+          minimum: 1
+          maximum: 12
+        day:
+          type: integer
+          minimum: 1
+          maximum: 31
+
+    ChapterReference:
+      type: object
+      required: [number]
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+          minimum: 1
+
+    Organization:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [type]
+          properties:
+            type:
+              $ref: '#/components/schemas/OrganizationType'
+            status:
+              $ref: '#/components/schemas/OrganizationStatus'
+            memberCount:
+              type: integer
+              minimum: 0
+              description: Visible active direct memberships only.
+            totalBounty:
+              type: integer
+              minimum: 0
+              description: Sum of visible ACTIVE bounties for visible active direct members.
+            debut:
+              $ref: '#/components/schemas/ChapterReference'
+            members:
+              type: array
+              description: Visible active direct members, present when requested using the members include.
+              items:
+                $ref: '#/components/schemas/OrganizationMember'
+            relationships:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrganizationRelationship'
+            locations:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrganizationLocation'
+            statusHistory:
+              type: array
+              items:
+                $ref: '#/components/schemas/OrganizationStatusRecord'
+            sources:
+              type: array
+              items:
+                $ref: '#/components/schemas/Source'
+
+    OrganizationType:
+      type: string
+      enum:
+        - PIRATE_CREW
+        - PIRATE_FLEET
+        - ALLIANCE
+        - GOVERNMENT
+        - MILITARY
+        - INTELLIGENCE_AGENCY
+        - REVOLUTIONARY
+        - CRIMINAL
+        - BUSINESS
+        - SCIENTIFIC
+        - DIVISION
+        - OTHER
+
+    OrganizationStatus:
+      type: string
+      enum: [ACTIVE, DISBANDED, DESTROYED, UNKNOWN]
+
+    OrganizationMember:
+      type: object
+      required: [character]
+      properties:
+        character:
+          $ref: '#/components/schemas/ResourceReference'
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceReference'
+
+    OrganizationRelationship:
+      type: object
+      required: [organization, type]
+      properties:
+        organization:
+          $ref: '#/components/schemas/ResourceReference'
+        type:
+          type: string
+          enum: [SUBUNIT_OF, AFFILIATED_WITH, ALLIED_WITH, SUBORDINATE_TO, PREDECESSOR_OF, MERGED_INTO]
+        validFromChapter:
+          type: integer
+          minimum: 1
+        validToChapter:
+          type: integer
+          minimum: 1
+        availableFromChapter:
+          type: integer
+          minimum: 1
+
+    OrganizationLocation:
+      type: object
+      required: [location, type]
+      properties:
+        location:
+          $ref: '#/components/schemas/ResourceReference'
+        type:
+          type: string
+          enum: [HEADQUARTERS, BASE, ORIGIN, TERRITORY]
+
+    OrganizationStatusRecord:
+      type: object
+      required: [status, availableFromChapter]
+      properties:
+        status:
+          $ref: '#/components/schemas/OrganizationStatus'
+        validFromChapter:
+          type: integer
+          minimum: 1
+        validToChapter:
+          type: integer
+          minimum: 1
+        availableFromChapter:
+          type: integer
+          minimum: 1
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+
+    Race:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          properties:
+            parent:
+              oneOf:
+                - $ref: '#/components/schemas/ResourceReference'
+                - type: 'null'
+
+    Location:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+            parent:
+              oneOf:
+                - $ref: '#/components/schemas/ResourceReference'
+                - type: 'null'
+
+    DevilFruit:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [type]
+          properties:
+            type:
+              type: string
+              enum: [PARAMECIA, ZOAN, LOGIA, UNKNOWN]
+            subtype:
+              type: [string, 'null']
+
+    Saga:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [order, status]
+          properties:
+            order:
+              type: integer
+            status:
+              $ref: '#/components/schemas/StoryStatus'
+
+    Arc:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [saga, orderWithinSaga, status]
+          properties:
+            saga:
+              $ref: '#/components/schemas/ResourceReference'
+            orderWithinSaga:
+              type: integer
+            status:
+              $ref: '#/components/schemas/StoryStatus'
+
+    StoryStatus:
+      type: string
+      enum: [ONGOING, COMPLETED]
+
+    Chapter:
+      type: object
+      required: [id, number, coverType]
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+          minimum: 1
+        title:
+          type: [string, 'null']
+          description: Localized chapter title.
+        arc:
+          oneOf:
+            - $ref: '#/components/schemas/ResourceReference'
+            - type: 'null'
+        volume:
+          oneOf:
+            - $ref: '#/components/schemas/VolumeReference'
+            - type: 'null'
+        pageCount:
+          type: [integer, 'null']
+          minimum: 1
+        japaneseReleaseDate:
+          type: [string, 'null']
+          format: date
+        wsjIssue:
+          type: [string, 'null']
+        coverType:
+          type: string
+          enum: [STANDARD, COLOR_SPREAD, COVER_STORY, OTHER]
+
+    VolumeReference:
+      type: object
+      required: [id, number]
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+
+    Volume:
+      type: object
+      required: [id, number]
+      properties:
+        id:
+          type: string
+        number:
+          type: integer
+          minimum: 1
+        title:
+          type: [string, 'null']
+          description: Localized volume title.
+        chapters:
+          type: array
+          description: Present when requested using the chapters include.
+          items:
+            $ref: '#/components/schemas/ChapterReference'
+        editions:
+          type: array
+          description: Present when requested using the editions include.
+          items:
+            $ref: '#/components/schemas/VolumeEdition'
+
+    VolumeEdition:
+      type: object
+      required: [id, locale, format]
+      properties:
+        id:
+          type: string
+        locale:
+          type: string
+        region:
+          type: string
+        format:
+          type: string
+          enum: [PAPERBACK, HARDCOVER, DIGITAL, COLORED, OTHER]
+        localizedTitle:
+          type: string
+        pageCount:
+          type: integer
+          minimum: 1
+        releaseDate:
+          type: string
+          format: date
+        isbn:
+          type: string
+        publisher:
+          type: string
+
+    CoverStory:
+      allOf:
+        - $ref: '#/components/schemas/LocalizedResource'
+        - type: object
+          required: [order]
+          properties:
+            order:
+              type: integer
+            episodes:
+              type: array
+              description: Present when requested using the episodes include.
+              items:
+                $ref: '#/components/schemas/CoverStoryEpisode'
+
+    CoverStoryEpisode:
+      type: object
+      required: [id, episodeNumber, chapter]
+      properties:
+        id:
+          type: string
+        episodeNumber:
+          type: integer
+          minimum: 1
+        chapter:
+          $ref: '#/components/schemas/ChapterReference'
+        title:
+          type: string
+        description:
+          type: string
+
+    Source:
+      type: object
+      required: [id, type]
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [MANGA_CHAPTER, SBS, VIVRE_CARD, DATABOOK, OTHER_OFFICIAL]
+        chapter:
+          oneOf:
+            - $ref: '#/components/schemas/ChapterReference'
+            - type: 'null'
+        volume:
+          oneOf:
+            - $ref: '#/components/schemas/VolumeReference'
+            - type: 'null'
+        locator:
+          type: [string, 'null']
+        referenceLabel:
+          type: [string, 'null']
+        publicationDate:
+          type: string
+          format: date
+
+    Bounty:
+      type: object
+      required: [amount, currency, status, availableFromChapter]
+      properties:
+        amount:
+          type: integer
+          minimum: 0
+        currency:
+          type: string
+          const: BERRIES
+        status:
+          type: string
+          enum: [ACTIVE, FROZEN, WITHDRAWN, UNKNOWN]
+        validFromChapter:
+          type: integer
+          minimum: 1
+        validToChapter:
+          type: integer
+          minimum: 1
+        availableFromChapter:
+          type: integer
+          minimum: 1
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/Source'
+
+    CharacterCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Character'
+        page:
+          $ref: '#/components/schemas/Page'
+    OrganizationCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Organization'
+        page:
+          $ref: '#/components/schemas/Page'
+    RaceCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Race'
+        page:
+          $ref: '#/components/schemas/Page'
+    LocationCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Location'
+        page:
+          $ref: '#/components/schemas/Page'
+    DevilFruitCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DevilFruit'
+        page:
+          $ref: '#/components/schemas/Page'
+    SagaCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Saga'
+        page:
+          $ref: '#/components/schemas/Page'
+    ArcCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Arc'
+        page:
+          $ref: '#/components/schemas/Page'
+    ChapterCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Chapter'
+        page:
+          $ref: '#/components/schemas/Page'
+    VolumeCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Volume'
+        page:
+          $ref: '#/components/schemas/Page'
+    CoverStoryCollection:
+      type: object
+      required: [data, page]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/CoverStory'
+        page:
+          $ref: '#/components/schemas/Page'

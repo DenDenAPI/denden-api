@@ -104,6 +104,8 @@ infrastructure → application → domain
 | [`docs/architecture/`](docs/architecture/) | Architecture overview and decisions |
 | [`specs/`](specs/) | Feature scope, requirements, and acceptance criteria |
 | [`docs/api-design.md`](docs/api-design.md) | REST conventions and planned public API behavior |
+| [`specs/api-v1-contract.md`](specs/api-v1-contract.md) | Proposed v1 API contract and review criteria |
+| [`openapi/openapi.yaml`](openapi/openapi.yaml) | Proposed machine-readable v1 contract |
 
 ## Contributing
 
