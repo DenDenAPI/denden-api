@@ -42,7 +42,7 @@ DenDenAPI is designed as a consistent data platform rather than a wiki mirror. I
 - [x] Clean Architecture backend foundation
 - [x] Automated build and test workflow
 - [x] Open-source contribution and security policies
-- [ ] Domain freeze and remaining decision records
+- [x] Domain freeze and remaining decision records
 - [ ] OpenAPI contract and PostgreSQL schema
 - [ ] First end-to-end domain feature
 
