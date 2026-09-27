@@ -32,7 +32,7 @@ Define the first versioned, read-only REST and JSON contract for the approved v0
 ## Requirements
 
 1. All public resource paths are under `/v1` and use JSON.
-2. Resource identity is opaque and stable. Slugs are stable and non-localized where the domain defines them.
+2. Resource identity is a stable UUID serialized as a canonical UUID string. Slugs are stable and non-localized where the domain defines them.
 3. Unknown or unsupported query parameters that affect filtering or includes return `400` with the documented problem envelope.
 4. A direct lookup of an unknown or spoiler-hidden resource returns the same `404` shape.
 5. Lists, cursor behavior, errors, includes, and derived values do not expose spoiler-filtered records.
