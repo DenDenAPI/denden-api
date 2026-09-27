@@ -31,4 +31,8 @@ Common commands:
 docker compose up --build
 ```
 
-The API process listens on port `8080`. PostgreSQL is exposed locally on port `5432`.
+The API process listens on port `8080`. PostgreSQL is exposed locally on port `5432`. If port `8080` is already in use, select another host port without changing the container configuration:
+
+```shell
+API_PORT=8081 docker compose up --build
+```
