@@ -79,7 +79,7 @@ GET /v1/characters/monkey-d-luffy?lang=es
 
 ```json
 {
-  "id": "char_01H...",
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "slug": "monkey-d-luffy",
   "name": "Monkey D. Luffy",
   "aliases": [],
