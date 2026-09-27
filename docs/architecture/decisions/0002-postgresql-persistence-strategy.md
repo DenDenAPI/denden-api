@@ -13,7 +13,7 @@ The approved domain includes stable resource identity, localized content, typed 
 
 - Use explicit, typed relational tables for entities, translations, relationships, historical facts, and evidence associations.
 - Use primary and foreign keys, unique constraints, and check constraints where they express the documented model. Do not represent domain facts through generic entity/fact tables or JSONB payloads.
-- Keep chapter references as foreign keys to `Chapter`; retain the canonical chapter number as a unique lookup value, not as a substitute for a reference.
+- Keep chapter references as foreign keys to `Chapter`; temporal chapter references use the canonical unique chapter number as an alternate foreign-key target so their sequence can be compared. The UUID remains the chapter's primary and public identifier. Never store an unvalidated chapter number as a reference.
 - Keep fictional validity and reader-availability chapter references distinct. Do not persist derived projections as authoritative facts.
 - Model evidence associations with typed link tables and foreign keys to `Source`; v0.1 evidence links associate facts or relationships with sources without adding unapproved evidence roles or editorial-note fields.
 
@@ -43,7 +43,7 @@ The approved domain includes stable resource identity, localized content, typed 
 - Entity-specific translation and evidence tables preserve ordinary foreign-key integrity and make ownership visible in SQL.
 - UUIDs provide a uniform opaque identity representation; stable slugs and chapter numbers remain separate lookup keys.
 - Schema changes are reviewed through Flyway migrations, while generated jOOQ types can be recreated from the database schema rather than drifting as separately edited files.
-- Complex temporal invariants still require suitable database constraints and/or application/editorial validation when each fact table is designed; this ADR does not weaken the domain invariants.
+- Temporal interval overlap enforcement is specified in [ADR 0003](0003-postgresql-temporal-interval-integrity.md). Other complex cross-record invariants still require suitable database constraints and/or application/editorial validation when each fact table is designed; this ADR does not weaken the domain invariants.
 
 ## References
 
