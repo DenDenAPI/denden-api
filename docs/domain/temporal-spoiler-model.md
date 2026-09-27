@@ -94,4 +94,4 @@ flowchart TD
 
 ## Error behavior
 
-Malformed or non-positive chapter parameters return `400`. A chapter beyond the ingested dataset may return `400` with the supported maximum rather than pretending knowledge of unpublished data. Exact error envelopes are specified in [API design](api-design.md).
+Malformed or non-positive chapter parameters return `400`. A chapter beyond the ingested dataset may return `400` with the supported maximum rather than pretending knowledge of unpublished data. Exact error envelopes are specified in [API design](../api-design.md).
