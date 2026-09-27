@@ -1,11 +1,12 @@
 plugins {
     kotlin("jvm")
     kotlin("plugin.serialization")
+    id("dev.zacsweers.metro")
     application
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 application {
@@ -21,10 +22,6 @@ dependencies {
     implementation("io.ktor:ktor-server-netty")
     implementation("io.ktor:ktor-server-content-negotiation")
     implementation("io.ktor:ktor-serialization-kotlinx-json")
-
-    implementation(platform("io.insert-koin:koin-bom:4.2.0"))
-    implementation("io.insert-koin:koin-ktor")
-    implementation("io.insert-koin:koin-logger-slf4j")
 
     runtimeOnly("ch.qos.logback:logback-classic:1.5.18")
 

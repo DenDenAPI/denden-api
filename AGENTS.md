@@ -14,8 +14,8 @@ Small implementation decisions may be made autonomously when they do not affect 
 
 ## Stack
 
-- Kotlin and Gradle Kotlin DSL
-- Ktor and Koin
+- Kotlin on JDK 21 and Gradle Kotlin DSL
+- Ktor and Metro
 - PostgreSQL, jOOQ, and Flyway
 - kotlinx.serialization
 - JUnit 5, Ktor test utilities, and Testcontainers
@@ -27,12 +27,12 @@ Do not introduce GraphQL or another foundational framework in anticipation of fu
 
 The Gradle modules are `domain`, `application`, `infrastructure`, and `api`. Dependencies point inward.
 
-- `domain`: pure Kotlin business concepts and rules. No Ktor, Koin, jOOQ, persistence, HTTP, JSON, or serialization concerns.
+- `domain`: pure Kotlin business concepts and rules. No Ktor, Metro, jOOQ, persistence, HTTP, JSON, or serialization concerns.
 - `application`: use cases and orchestration. It depends on domain and defines ports needed by use cases.
 - `infrastructure`: PostgreSQL access, jOOQ repositories, migrations, persistence mappings, and external adapters. Persistence models never leak inward or into API contracts.
-- `api`: Ktor routes, request and response DTOs, HTTP validation and error mapping, serialization, localization resolution, and the Koin composition root.
+- `api`: Ktor routes, request and response DTOs, HTTP validation and error mapping, serialization, localization resolution, and the Metro dependency graph.
 
-Prefer constructor injection. Keep Koin at the composition boundary; do not use it as a service locator.
+Prefer constructor injection. Define the Metro graph and bindings at the composition boundary. Keep `domain` and `application` independent from the DI framework, and do not use the graph as a service locator.
 
 ## API and localization
 

@@ -9,20 +9,22 @@ DenDenAPI needs a maintainable backend for a rich multilingual and spoiler-aware
 
 ## Decision
 
-Use Kotlin with Ktor, Koin, PostgreSQL, jOOQ, Flyway, kotlinx.serialization, JUnit 5, Testcontainers, Gradle Kotlin DSL, and Docker.
+Use Kotlin on JDK 21 with Ktor, Metro, PostgreSQL, jOOQ, Flyway, kotlinx.serialization, JUnit 5, Testcontainers, Gradle Kotlin DSL, and Docker.
 
 Organize the backend into four Gradle modules:
 
 - `domain` contains pure Kotlin business concepts and rules;
 - `application` contains use cases and defines required ports;
 - `infrastructure` implements persistence and external adapters;
-- `api` contains Ktor HTTP concerns and the Koin composition root.
+- `api` contains Ktor HTTP concerns and the Metro dependency graph.
 
 Module dependencies point inward. Public API and persistence models remain separate from domain models.
 
 ## Consequences
 
 - The build enforces the primary architectural boundaries.
-- Ktor, Koin, jOOQ, and serialization concerns stay outside the domain.
+- Ktor, Metro, jOOQ, and serialization concerns stay outside the domain.
+- Metro validates and generates the dependency graph at compile time without KSP or KAPT.
+- JDK 21 is the build and runtime baseline required by the Metro Gradle plugin.
 - PostgreSQL integration behavior is tested against PostgreSQL through Testcontainers.
 - Database schema and jOOQ code-generation strategy remain separate decisions and are not established by this ADR.

@@ -10,7 +10,7 @@ The domain definition lives in [`docs/domain/`](docs/domain/), architecture deci
 
 ## Backend
 
-The backend uses Kotlin, Ktor, Koin, PostgreSQL, jOOQ, Flyway, and kotlinx.serialization. Four Gradle modules enforce the Clean Architecture dependency direction:
+The backend uses Kotlin, Ktor, Metro, PostgreSQL, jOOQ, Flyway, and kotlinx.serialization. Four Gradle modules enforce the Clean Architecture dependency direction:
 
 ```text
 api -> infrastructure -> application -> domain
@@ -20,7 +20,7 @@ api -> infrastructure -> application -> domain
 
 Requirements:
 
-- JDK 17
+- JDK 21
 - Docker with Docker Compose
 
 Common commands:
