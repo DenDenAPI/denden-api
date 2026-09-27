@@ -38,7 +38,7 @@ Not every route must ship in the first implementation increment; [v0.1 scope](..
 ?lang > Accept-Language > en
 ```
 
-The server returns `Content-Language` and, when applicable, `Vary: Accept-Language`. See [localization](domain/localization.md).
+Localized fields use the deterministic fallback chain exact requested tag, base language, then English. Mixed-language field fallback is allowed; `Content-Language` lists every locale actually present in fallback-priority order. The server returns `Vary: Accept-Language` when the response can depend on that header. See [localization](domain/localization.md).
 
 ## Temporal and spoiler controls
 

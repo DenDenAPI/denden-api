@@ -1,6 +1,6 @@
 # DenDenAPI documentation
 
-Status: **proposed domain freeze for v0.1**.
+Status: **domain frozen for v0.1 on 2026-09-27**.
 
 The domain documents define the product contract that must be reviewed before feature implementation. Architecture documentation records approved technical decisions separately from domain meaning.
 
@@ -23,4 +23,4 @@ The documents use three labels:
 - **Proposal**: a recommended contract that still needs review during the v0.1 freeze.
 - **Deferred**: intentionally designed only far enough to avoid closing future options.
 
-After this package is accepted, material domain changes require explicit approval. Significant technical decisions should be recorded as Architecture Decision Records.
+The package is accepted for v0.1. Material domain changes require explicit approval. Significant technical decisions should be recorded as Architecture Decision Records.

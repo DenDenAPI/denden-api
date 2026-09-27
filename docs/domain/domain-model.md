@@ -256,7 +256,9 @@ CharacterHeightRecord
   sources[]
 ```
 
-The gender enum remains a proposal pending dataset review; unknown and absent data must remain distinguishable. Age records avoid deriving fictional age from real release dates. Height is integer centimeters unless a future evidence model needs different precision. Additional profile fields such as blood type must be added as explicit typed concepts, not an unvalidated key/value bag.
+The gender values for v0.1 are `MALE`, `FEMALE`, `NON_BINARY`, `UNKNOWN` and `NOT_APPLICABLE`. They are editorial classifications that require official-source evidence and must never be inferred from presentation, names or appearance. `UNKNOWN` means the available official evidence explicitly leaves the value unknown or indeterminate. `NOT_APPLICABLE` means the concept does not apply to the character. The absence of a `CharacterGenderRecord` means that DenDenAPI has no recorded value; it is distinct from both enum values.
+
+Age records avoid deriving fictional age from real release dates. Height is integer centimeters unless a future evidence model needs different precision. Additional profile fields such as blood type must be added as explicit typed concepts, not an unvalidated key/value bag.
 
 Occupations follow the same pattern after v0.1: a localized `Occupation` taxonomy plus historical `CharacterOccupation` assignments with availability and evidence. Organization-specific ranks and positions remain `OrganizationRoleAssignment`, not occupations.
 
@@ -476,7 +478,7 @@ Headquarters is historical, not a fixed field on an organization.
 
 ### Derived organization values
 
-`memberCount` is the count of visible active direct memberships. `totalBounty` is a documented aggregation over visible active members' bounties. Neither is persisted as authoritative organization data. The aggregation must define whether it uses each character's active/latest bounty and must never include spoiler-filtered membership or bounty facts.
+`memberCount` is the count of visible active direct memberships. `totalBounty` sums the visible `ACTIVE` bounty at the selected story point for each visible active direct member. `FROZEN`, `WITHDRAWN`, `UNKNOWN` and spoiler-filtered bounty records are excluded. Neither value is persisted as authoritative organization data.
 
 ## Powers and combat
 
@@ -569,14 +571,21 @@ Bounty
   characterId
   amount
   currency: BERRIES
-  status: ACTIVE | WITHDRAWN | FROZEN | UNKNOWN ?
+  status: ACTIVE | FROZEN | WITHDRAWN | UNKNOWN
   validFromChapter?
   validToChapter?
   availableFromChapter
   sources[]
 ```
 
-A bounty is a historical fact, not `Character.bounty`. `amount` is an integer in berries. Status semantics need dataset validation before implementation.
+A bounty is a historical fact, not `Character.bounty`. `amount` is an integer in berries. Its status has the following meaning:
+
+- `ACTIVE`: the bounty is currently in force at the selected story point;
+- `FROZEN`: enforcement is temporarily suspended while the recorded amount is retained;
+- `WITHDRAWN`: the bounty has been explicitly cancelled or is no longer in force;
+- `UNKNOWN`: an amount is known, but the available official evidence does not establish its status.
+
+Status must be supported by official-source evidence and must not be inferred from a character's organization, role, disappearance or presumed death. A superseded amount ends through its validity interval; it is not automatically `WITHDRAWN`. At any story point, at most one bounty record may be current for a character.
 
 ### Weapon and WeaponOwnership
 

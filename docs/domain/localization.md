@@ -65,10 +65,11 @@ erDiagram
 
 - Return localized display strings, not translation maps, by default.
 - Keep `id`, `slug`, enums, dates, numeric values and references language-neutral.
-- Include `Content-Language` with the resolved locale.
+- Resolve each localized field independently using exact requested tag, base language and then English, in that order.
+- Never fall back to an unrelated locale. Missing optional content after the complete fallback chain is omitted or `null`.
+- Include every locale actually used in `Content-Language`, ordered by fallback priority. A response using Spanish and English fields returns `Content-Language: es, en`; an English-only response returns `Content-Language: en`.
 - Include a `Vary: Accept-Language` header when the response can depend on that header.
-- A response may use English for an individual missing field while the requested locale is used elsewhere. If field-level mixed fallback is allowed, it must be deterministic and documented.
-- Missing optional translated content is omitted or `null`; never expose internal translation keys to public clients.
+- Never expose internal translation keys to public clients.
 
 Example:
 
