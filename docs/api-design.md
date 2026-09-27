@@ -30,7 +30,7 @@ GET /v1/sources/{id}
 GET /v1/meta
 ```
 
-Not every route must ship in the first implementation increment; [v0.1 scope](v0.1-scope.md) defines the commitment.
+Not every route must ship in the first implementation increment; [v0.1 scope](../specs/v0.1-scope.md) defines the commitment.
 
 ## Language negotiation
 
@@ -38,7 +38,7 @@ Not every route must ship in the first implementation increment; [v0.1 scope](v0
 ?lang > Accept-Language > en
 ```
 
-The server returns `Content-Language` and, when applicable, `Vary: Accept-Language`. See [localization](localization.md).
+The server returns `Content-Language` and, when applicable, `Vary: Accept-Language`. See [localization](domain/localization.md).
 
 ## Temporal and spoiler controls
 
@@ -53,7 +53,8 @@ Filters apply recursively to included resources and derived values. Lists omit r
 
 No error, pagination count, sort order or facet may disclose filtered records. Caches must vary on both parameters.
 
-See [temporal and spoiler model](temporal-spoiler-model.md) for semantics.
+See [temporal and spoiler model](domain/temporal-spoiler-model.md) for semantics.
+
 
 ## Includes
 

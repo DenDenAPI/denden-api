@@ -89,4 +89,4 @@ For v0.1:
 - Completing every possible One Piece entity before shipping.
 - Encoding subjective power rankings or invented numeric power levels.
 
-See [v0.1 scope and handoff](v0.1-scope.md) for the exact delivery boundary.
+See [v0.1 scope and handoff](../../specs/v0.1-scope.md) for the exact delivery boundary.
