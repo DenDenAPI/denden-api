@@ -1,0 +1,60 @@
+name: Bug report
+description: Report reproducible behavior that does not match the documented project behavior.
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for taking the time to report a problem. Do not include secrets or security vulnerabilities here.
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: Describe the problem clearly and concisely.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Provide the smallest reliable sequence that demonstrates the problem.
+      placeholder: |
+        1. Start the service with ...
+        2. Send ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Include the commit, operating system, JDK, Docker, and any relevant configuration.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Logs or additional context
+      description: Remove credentials, tokens, personal data, and other secrets before posting.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched for an existing issue describing this problem.
+          required: true
+        - label: This report does not disclose a security vulnerability.
+          required: true

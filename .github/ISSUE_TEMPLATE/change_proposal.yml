@@ -1,0 +1,64 @@
+name: Change proposal
+description: Propose a feature, domain clarification, API change, or architectural improvement.
+title: "proposal: "
+labels:
+  - proposal
+body:
+  - type: markdown
+    attributes:
+      value: Discuss significant changes before implementation. A proposal is not an approved specification.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What user or project problem should be solved?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe observable success without prescribing unnecessary implementation details.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Proposed scope
+      description: What should be included, and what should remain out of scope?
+    validations:
+      required: true
+  - type: dropdown
+    id: decision-area
+    attributes:
+      label: Decision areas
+      description: Select the area most affected by the proposal.
+      options:
+        - Domain semantics
+        - Public API contract
+        - Architecture
+        - Data model or persistence
+        - Dependency or tooling
+        - Documentation or contributor experience
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: sources
+    attributes:
+      label: Relevant documentation
+      description: Link relevant domain documentation, specifications, ADRs, issues, or external references.
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Describe other approaches or the option of making no change.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checks
+      options:
+        - label: I searched for an existing proposal covering this topic.
+          required: true
+        - label: I have not started a substantial implementation that assumes this proposal is approved.
+          required: true

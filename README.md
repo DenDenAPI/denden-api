@@ -36,3 +36,13 @@ The API process listens on port `8080`. PostgreSQL is exposed locally on port `5
 ```shell
 API_PORT=8081 docker compose up --build
 ```
+
+## Contributing
+
+Contributions are welcome. Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a pull request. Project governance is documented in [`GOVERNANCE.md`](GOVERNANCE.md), and community participation follows the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
+
+Report suspected vulnerabilities privately by following [`SECURITY.md`](SECURITY.md).
+
+## License
+
+A project license has not been selected yet. Until one is added, the repository is publicly visible but no permission to use, modify, or redistribute its contents is granted.
