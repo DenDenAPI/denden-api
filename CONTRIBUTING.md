@@ -53,6 +53,8 @@ Complete the pull request template and explain both what changed and why. Link t
 
 Pull requests are merged by a maintainer using squash merge. Review comments must be resolved before merging. A maintainer may ask for a change to be split when it mixes unrelated concerns.
 
+Unless explicitly stated otherwise, contributions intentionally submitted for inclusion in DenDenAPI are provided under the [Apache License, Version 2.0](LICENSE), as described in Section 5 of that license.
+
 ## Reporting problems
 
 Use the issue forms for reproducible bugs and change proposals. For security vulnerabilities, follow [`SECURITY.md`](SECURITY.md) and do not open a public issue.

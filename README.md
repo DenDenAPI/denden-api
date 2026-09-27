@@ -45,4 +45,4 @@ Report suspected vulnerabilities privately by following [`SECURITY.md`](SECURITY
 
 ## License
 
-A project license has not been selected yet. Until one is added, the repository is publicly visible but no permission to use, modify, or redistribute its contents is granted.
+Original DenDenAPI software and documentation are licensed under the [Apache License, Version 2.0](LICENSE). See [`NOTICE`](NOTICE) for attribution and the third-party intellectual property disclaimer.
