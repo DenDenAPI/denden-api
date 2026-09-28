@@ -7,3 +7,4 @@ Each ADR states its status, context, decision, and consequences. Do not record a
 - [0001: Kotlin, Ktor, and Clean Architecture](0001-kotlin-ktor-clean-architecture.md)
 - [0002: PostgreSQL persistence strategy](0002-postgresql-persistence-strategy.md)
 - [0003: PostgreSQL temporal interval integrity](0003-postgresql-temporal-interval-integrity.md)
+- [0004: jOOQ code generation from migrated PostgreSQL](0004-jooq-code-generation.md)
