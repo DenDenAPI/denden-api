@@ -28,19 +28,20 @@ The fact is already true for an `asOfChapter=510` world view, but must be hidden
 
 - `asOfChapter=N` selects the state of the fictional world at chapter `N`.
 - `maxChapter=N` caps reader-visible knowledge at chapter `N`.
-- Omitting both returns the latest known, published view.
+- Omitting `asOfChapter` uses the dataset's maximum ingested chapter as the story point.
+- Omitting `maxChapter` uses the dataset's maximum ingested chapter as the reader-knowledge cap.
+- Omitting both therefore returns the latest known, published view in the current dataset.
 - Supplying both applies both filters; neither parameter weakens the other.
 
 For a temporally valid, spoiler-sensitive fact `f`, inclusion is conceptually:
 
 ```text
-(asOfChapter is absent
-  OR (f.validFromChapter is null OR f.validFromChapter <= asOfChapter)
-     AND (f.validToChapter is null OR asOfChapter <= f.validToChapter))
-AND
-(maxChapter is absent
-  OR f.availableFromChapter <= maxChapter)
+(f.validFromChapter is null OR f.validFromChapter <= effectiveAsOfChapter)
+AND (f.validToChapter is null OR effectiveAsOfChapter <= f.validToChapter)
+AND f.availableFromChapter <= effectiveMaxChapter
 ```
+
+`effectiveAsOfChapter` is `asOfChapter` when supplied and the dataset's maximum ingested chapter otherwise. `effectiveMaxChapter` is `maxChapter` when supplied and the dataset's maximum ingested chapter otherwise.
 
 Unknown validity boundaries do not mean false. They mean the API cannot use that boundary to exclude the fact. Editorial validation should prevent an unknown boundary from producing a misleading historical projection.
 
@@ -94,4 +95,4 @@ flowchart TD
 
 ## Error behavior
 
-Malformed or non-positive chapter parameters return `400`. A chapter beyond the ingested dataset may return `400` with the supported maximum rather than pretending knowledge of unpublished data. Exact error envelopes are specified in [API design](../api-design.md).
+Malformed or non-positive chapter parameters return `400`. A chapter beyond the ingested dataset also returns `400` with the supported maximum rather than pretending knowledge of unpublished data. Exact error envelopes are specified in [API design](../api-design.md).
