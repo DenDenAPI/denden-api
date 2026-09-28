@@ -627,14 +627,14 @@ components:
     AsOfChapter:
       name: asOfChapter
       in: query
-      description: Select facts valid at this chapter in the story timeline.
+      description: Select facts valid at this chapter in the story timeline. Defaults to the dataset's maximum ingested chapter. Values above that maximum return 400.
       schema:
         type: integer
         minimum: 1
     MaxChapter:
       name: maxChapter
       in: query
-      description: Hide facts that are not safely available to a reader through this chapter.
+      description: Hide facts that are not safely available to a reader through this chapter. Defaults to the dataset's maximum ingested chapter. Values above that maximum return 400.
       schema:
         type: integer
         minimum: 1

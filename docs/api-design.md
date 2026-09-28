@@ -51,6 +51,8 @@ maxChapter=<positive chapter number>
 
 Filters apply recursively to included resources and derived values. Lists omit resources that are not yet safely visible. Direct lookup of a hidden resource returns the same `404` shape as an unknown resource so existence itself is not leaked.
 
+When omitted, each control defaults independently to the dataset's maximum ingested chapter. A supplied chapter above that maximum returns `400` and reports the supported maximum. `asOfChapter` may be greater than `maxChapter`; the spoiler cap still takes precedence over exposure.
+
 No error, pagination count, sort order or facet may disclose filtered records. Caches must vary on both parameters.
 
 See [temporal and spoiler model](domain/temporal-spoiler-model.md) for semantics.
