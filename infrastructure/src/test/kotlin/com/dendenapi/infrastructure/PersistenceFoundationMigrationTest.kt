@@ -6,9 +6,9 @@ import java.sql.SQLException
 import java.util.UUID
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.Test
-import org.testcontainers.containers.PostgreSQLContainer
 import org.testcontainers.junit.jupiter.Container
 import org.testcontainers.junit.jupiter.Testcontainers
+import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 
@@ -294,6 +294,6 @@ class PersistenceFoundationMigrationTest {
     companion object {
         @Container
         @JvmStatic
-        val postgres = PostgreSQLContainer<Nothing>("postgres:18-alpine")
+        val postgres = PostgreSQLContainer("postgres:18-alpine")
     }
 }
