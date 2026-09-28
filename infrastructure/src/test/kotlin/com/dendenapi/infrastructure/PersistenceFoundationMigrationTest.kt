@@ -22,7 +22,7 @@ class PersistenceFoundationMigrationTest {
                 .locations("classpath:db/migration")
                 .load()
 
-        assertEquals(1, flyway.migrate().migrationsExecuted)
+        assertEquals(2, flyway.migrate().migrationsExecuted)
         assertEquals(0, flyway.migrate().migrationsExecuted)
 
         DriverManager.getConnection(postgres.jdbcUrl, postgres.username, postgres.password).use { connection ->
