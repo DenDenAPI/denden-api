@@ -1,6 +1,6 @@
 # Public API design
 
-This document defines the proposed HTTP contract for v1 implementation planning. The machine-readable contract is [`openapi/openapi.yaml`](../openapi/openapi.yaml), and the review criteria are in the [v1 API contract specification](../specs/api-v1-contract.md). Both remain proposals until approved. They deliberately do not choose a database or persistence strategy.
+This document describes the approved HTTP contract for v1 implementation. The machine-readable contract is [`openapi/openapi.yaml`](../openapi/openapi.yaml), and its requirements are in the [v1 API contract specification](../specs/api-v1-contract.md). It deliberately does not choose a database or persistence strategy.
 
 ## Resource style
 
@@ -11,7 +11,7 @@ This document defines the proposed HTTP contract for v1 implementation planning.
 - Compact default representations; related collections require `include` or a nested endpoint.
 - Enums are stable uppercase machine values and are not translated.
 
-Proposed core routes:
+Core v1 routes:
 
 ```text
 GET /v1/characters
@@ -71,6 +71,8 @@ GET /v1/volumes/1?include=chapters,editions
 GET /v1/cover-stories/dawns-romance?include=episodes
 ```
 
+Includes are available on character and organization collection/detail routes, volume detail, and cover-story detail. Unrequested expansion fields are omitted; requested expansions are returned as arrays, including `[]` when no visible results exist. An explicitly empty include value is invalid. Duplicate tokens are deduplicated and token whitespace is ignored.
+
 Unknown includes return `400` with allowed values. Every include has bounded depth and uses the request's language, temporal and spoiler context. A future `organizations.ancestors` include may expose derived effective affiliations; default organization membership remains direct only.
 
 ## Example character response
@@ -88,13 +90,15 @@ Unknown includes return `400` with allowed values. Every include has bounded dep
     "day": 5
   },
   "status": "ALIVE",
-  "race": {
-    "id": "race_01H...",
-    "slug": "human",
-    "name": "Humano"
-  },
+  "races": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "slug": "human",
+      "name": "Humano"
+    }
+  ],
   "origin": {
-    "id": "loc_01H...",
+    "id": "550e8400-e29b-41d4-a716-446655440002",
     "slug": "foosha-village",
     "name": "Villa Foosha"
   },
@@ -110,7 +114,7 @@ This shape is a projection. It does not imply scalar `status`, `race` or `origin
 
 ```json
 {
-  "id": "org_01H...",
+  "id": "550e8400-e29b-41d4-a716-446655440003",
   "slug": "straw-hat-pirates",
   "name": "Piratas de Sombrero de Paja",
   "type": "PIRATE_CREW",
@@ -123,11 +127,13 @@ This shape is a projection. It does not imply scalar `status`, `race` or `origin
 }
 ```
 
+Named resources use stable slugs in detail paths; chapter and volume detail paths use their main-series number; source detail paths use canonical UUIDs. Every resource ID in a response is a canonical UUID string.
+
 The numeric values are illustrative contract examples, not seed-data assertions. Counts and totals are derived from the visible filtered graph.
 
 ## History and sources
 
-Default detail responses return the selected current/as-of projection. Proposed opt-in includes expose history and evidence:
+Default detail responses return the selected current/as-of projection. Opt-in includes expose history and evidence:
 
 ```text
 include=statusHistory,bounties,sources
@@ -142,8 +148,11 @@ Proposal for v0.1:
 ```text
 page[limit]=20       default 20, maximum 100
 page[cursor]=...     opaque cursor
-sort=slug            explicit allowlist per resource
+sort=slug            explicit allowlist for slug-ordered resources
+sort=number          chapters and volumes, ascending
 ```
+
+The cursor binds to resource, sort, filters, includes, effective locale, temporal context, and dataset version. Clients may change `page[limit]` while following a cursor. Invalid or mismatched cursors return `400`.
 
 Response envelope:
 
@@ -160,13 +169,16 @@ Avoid total counts in spoiler-filtered collections unless they can be computed w
 
 ## Filtering and search
 
-Initial filters should be explicit and resource-specific, for example:
+The v1 filter allowlist is explicit and resource-specific:
 
 ```text
 GET /v1/characters?organization=straw-hat-pirates
 GET /v1/organizations?type=PIRATE_CREW
+GET /v1/arcs?saga=east-blue
 GET /v1/chapters?arc=east-blue
 ```
+
+`organization` filters characters by direct membership; `type` filters organizations; `saga` filters arcs; and `arc` filters chapters. Other collection routes do not accept resource-specific filters.
 
 Full-text search, advanced graph queries and arbitrary field selection are deferred. Search indexes must eventually apply the same spoiler rules as canonical reads.
 
@@ -188,7 +200,6 @@ Expected statuses:
 
 - `400` invalid language, filter, include or chapter bound;
 - `404` unknown or spoiler-hidden resource;
-- `406` only if no representation language can be produced under the final negotiation policy;
 - `429` rate limited;
 - `500` unexpected server failure without internal details.
 

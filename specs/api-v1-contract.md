@@ -1,8 +1,8 @@
-# Proposed v1 API contract
+# v1 API contract
 
 ## Status
 
-This is a proposal for review. The machine-readable OpenAPI document is [`../openapi/openapi.yaml`](../openapi/openapi.yaml). No public domain endpoints are implemented yet.
+Approved on 2026-09-30. The machine-readable contract is [`../openapi/openapi.yaml`](../openapi/openapi.yaml). Endpoint implementations are being delivered incrementally.
 
 ## Goal
 
@@ -17,8 +17,9 @@ Define the first versioned, read-only REST and JSON contract for the approved v0
 - Language selection with `lang` taking precedence over `Accept-Language`, exact locale then base language then English field fallback, and `Content-Language` listing locales used.
 - `asOfChapter` and `maxChapter` filtering applied recursively to projections, includes, and derived values.
 - Cursor pagination with a default limit of 20 and maximum of 100.
-- Bounded includes for character and organization detail/collection routes.
-- Bounded `chapters` and `editions` includes for volumes and `episodes` include for cover stories.
+- Bounded includes for character and organization detail and collection routes.
+- Bounded `chapters` and `editions` includes on volume detail, and `episodes` on cover-story detail.
+- Explicit route-specific collection filters and sort keys.
 - A stable problem response for invalid requests, missing or spoiler-hidden resources, rate limits, and server failures.
 
 ## Out of scope
@@ -41,17 +42,24 @@ Define the first versioned, read-only REST and JSON contract for the approved v0
 8. Source responses contain concise bibliographic references, never copyrighted source text.
 9. Organization totals use visible active direct members and their visible `ACTIVE` bounties.
 10. OpenAPI is updated with any approved contract change before implementation.
+11. Detail routes use stable slugs for named resources, main-series numbers for chapters and volumes, and UUIDs for sources.
+12. Includes are available only on character and organization collection/detail routes, volume detail, and cover-story detail.
+13. An unrequested include field is omitted; a requested include is returned as an array, including an empty array when it has no visible results. An explicitly empty `include` value is invalid.
+14. Duplicate include tokens are deduplicated; whitespace around tokens is ignored; unknown tokens return `400`.
+15. Collection filters are allowlisted: `organization` for characters, `type` for organizations, `saga` for arcs, and `arc` for chapters.
+16. Collection cursors bind to the resource, sort, filters, includes, effective locale, temporal context, and dataset version. The page limit may change between requests; an invalid or context-mismatched cursor returns `400`.
 
 ## Acceptance criteria
 
 - Every in-scope operation, parameter, response, and public schema is represented in `openapi/openapi.yaml`.
 - The contract is consistent with `docs/domain/`, `docs/api-design.md`, and `specs/v0.1-scope.md`.
 - The contract does not introduce persistence strategy or behavior outside the approved domain.
-- The proposal is approved before endpoint implementation begins.
+- This approved contract is the source of truth for endpoint implementation.
 
-## Review questions
+## Approved review decisions
 
-- Approve the detail paths for resources that previously had only proposed collection paths, including number-based chapter and volume lookup.
-- Approve the proposed projection fields and route-specific include allowlists.
-- Approve nested volume edition and cover story episode representations.
-- Approve request parameter names, pagination defaults, problem response, and status codes represented in the OpenAPI document.
+- Detail routes use stable slugs for named resources and numbers for chapters and volumes.
+- Projection fields and route-specific include allowlists are approved as represented in OpenAPI.
+- Volume editions and cover-story episodes are bounded nested detail includes.
+- Request parameters, pagination defaults, problem envelope, and status codes are approved as represented in OpenAPI.
+- `406` is not part of the contract because English fallback always supplies a response language.
