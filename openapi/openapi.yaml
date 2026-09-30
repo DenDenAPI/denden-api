@@ -2,9 +2,9 @@ openapi: 3.1.1
 info:
   title: DenDenAPI
   version: 1.0.0
-  summary: Proposed public REST API for structured One Piece data
+  summary: Public REST API for structured One Piece data
   description: |
-    Proposed v1 contract for review. This API is not implemented yet.
+    Approved v1 contract. Endpoint implementations are delivered incrementally.
     The API exposes manga-first structured facts with language selection,
     historical views, spoiler caps, and compact official source references.
     DenDenAPI is an unofficial fan project; see the repository NOTICE.
@@ -177,7 +177,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -202,7 +201,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/Race'
@@ -225,7 +223,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -250,7 +247,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/Location'
@@ -273,7 +269,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -298,7 +293,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/DevilFruit'
@@ -321,7 +315,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -346,7 +339,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/Saga'
@@ -369,7 +361,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -399,7 +390,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/Arc'
@@ -422,7 +412,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortByNumber'
@@ -458,7 +447,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
       responses:
         '200':
           $ref: '#/components/responses/Chapter'
@@ -481,7 +469,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortByNumber'
@@ -534,7 +521,6 @@ paths:
         - $ref: '#/components/parameters/AcceptLanguage'
         - $ref: '#/components/parameters/AsOfChapter'
         - $ref: '#/components/parameters/MaxChapter'
-        - $ref: '#/components/parameters/Include'
         - $ref: '#/components/parameters/PageLimit'
         - $ref: '#/components/parameters/PageCursor'
         - $ref: '#/components/parameters/SortBySlug'
@@ -643,10 +629,10 @@ components:
       in: query
       description: |
         Comma-separated route-specific allowlist of bounded related resources.
-        Characters accept bounties, organizations, devilFruits, haki, statusHistory, and sources.
-        Organizations accept members, relationships, locations, statusHistory, and sources.
-        Volumes accept chapters and editions. Cover stories accept episodes.
-        Other routes do not currently define includes. Unsupported values return a problem response.
+        Character collections and details accept bounties, organizations, devilFruits, haki, statusHistory, and sources.
+        Organization collections and details accept members, relationships, locations, statusHistory, and sources.
+        Volume details accept chapters and editions. Cover-story details accept episodes.
+        All other routes do not define includes. An unrequested expansion field is omitted; a requested expansion is an array, including an empty array when no visible results exist. An explicitly empty value is invalid. Duplicate tokens are deduplicated and whitespace around tokens is ignored. Unsupported values return a problem response.
       style: form
       explode: false
       schema:
@@ -678,7 +664,7 @@ components:
     PageCursor:
       name: page[cursor]
       in: query
-      description: Opaque cursor bound to the current query, locale, and temporal filters.
+      description: Opaque cursor bound to resource, sort, filters, includes, effective locale, temporal context, and dataset version. The page limit may change between requests; invalid or mismatched cursors return 400.
       schema:
         type: string
     SortBySlug:
