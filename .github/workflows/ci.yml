@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: denden-api
+      - uses: actions/checkout@v4
+        with:
+          repository: DenDenAPI/denden-data
+          path: denden-data
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: denden-api/package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: denden-api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: denden-api
+      - run: pnpm typecheck
+        working-directory: denden-api
+      - run: pnpm test
+        working-directory: denden-api
+      - run: pnpm validate:data ../denden-data
+        working-directory: denden-api
+      - run: pnpm build ../denden-data
+        working-directory: denden-api
+      - run: pnpm check:openapi
+        working-directory: denden-api
+      - run: pnpm check:worker
+        working-directory: denden-api

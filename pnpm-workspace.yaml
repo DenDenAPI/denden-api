@@ -1,0 +1,4 @@
+# These packages ship prebuilt binaries, so their install scripts are not needed.
+allowBuilds:
+  esbuild: false
+  workerd: false
