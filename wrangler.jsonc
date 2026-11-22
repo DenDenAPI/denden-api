@@ -12,8 +12,7 @@
     {
       "binding": "DB",
       "database_name": "denden",
-      // Replace with the real id after creating the database.
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "31792133-d9f6-49df-bdff-d4ac3a8fde02"
     }
   ],
   "ratelimits": [

@@ -57,7 +57,6 @@ Records and relations are served from static JSON. Filters, sorting and search u
 ## Related repositories
 
 - [`denden-data`](https://github.com/DenDenAPI/denden-data): the dataset.
-- [`denden-web`](https://github.com/DenDenAPI/denden-web): website and documentation.
 
 ## License
 
