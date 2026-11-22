@@ -4,6 +4,11 @@ export const SCHEMA = `
 DROP TABLE IF EXISTS records;
 DROP TABLE IF EXISTS facets;
 DROP TABLE IF EXISTS search_index;
+DROP TABLE IF EXISTS collection_counts;
+CREATE TABLE collection_counts (
+  collection TEXT PRIMARY KEY,
+  count INTEGER NOT NULL
+) WITHOUT ROWID;
 CREATE TABLE records (
   collection TEXT NOT NULL,
   id TEXT NOT NULL,
@@ -15,10 +20,10 @@ CREATE TABLE records (
   bounty INTEGER,
   PRIMARY KEY (collection, id)
 );
-CREATE INDEX records_name ON records (collection, sort_name);
-CREATE INDEX records_number ON records (collection, number);
+CREATE INDEX records_name ON records (collection, sort_name, id);
+CREATE INDEX records_number ON records (collection, number, sort_name, id);
 CREATE INDEX records_first_chapter ON records (collection, first_chapter);
-CREATE INDEX records_bounty ON records (collection, bounty);
+CREATE INDEX records_bounty ON records (collection, bounty DESC, sort_name, id);
 CREATE TABLE facets (
   collection TEXT NOT NULL,
   id TEXT NOT NULL,
@@ -36,6 +41,11 @@ function literal(value: string | number | null): string {
 }
 
 export function* insertStatements(output: BuildOutput): Generator<string> {
+  const counts = new Map<string, number>();
+  for (const row of output.records) counts.set(row.collection, (counts.get(row.collection) ?? 0) + 1);
+  for (const [collection, count] of counts) {
+    yield `INSERT INTO collection_counts VALUES (${literal(collection)},${count});`;
+  }
   for (const row of output.records) {
     const values = [
       row.collection,
