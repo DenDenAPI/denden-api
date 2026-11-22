@@ -3,6 +3,9 @@
   "name": "denden-api",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-01",
+  // Public traffic reaches this Worker through the denden-web service binding.
+  "workers_dev": false,
+  "preview_urls": false,
   "assets": {
     "directory": "dist/assets",
     "binding": "ASSETS",
