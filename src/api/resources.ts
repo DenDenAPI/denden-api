@@ -136,8 +136,6 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       "affiliations",
       "origin",
       "residences",
-      "ages",
-      "heights",
       "devil_fruits",
       "marine_rating",
     ],

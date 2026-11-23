@@ -336,6 +336,15 @@ function problem(c: Context, error: ApiError): Response {
   );
 }
 
+/** First chapter set after the two-year timeskip. */
+const POST_TIMESKIP_CHAPTER = 598;
+
+/** Values from an unspecified period ("other") cannot be placed on the timeline. */
+function isPeriodKnown(period: string, maxChapter: number): boolean {
+  if (period === "debut" || period === "pre_timeskip") return true;
+  return period === "post_timeskip" && maxChapter >= POST_TIMESKIP_CHAPTER;
+}
+
 function redact(definition: ResourceDefinition, body: Json, maxChapter: number): Json {
   const copy: Json = { ...body };
   const removed: string[] = [];
@@ -354,6 +363,15 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     if (visible.length !== bounties.length) removed.push("bounties");
     if (visible.length > 0) copy.bounties = visible;
     else delete copy.bounties;
+  }
+
+  for (const field of ["ages", "heights"]) {
+    const items = copy[field];
+    if (!Array.isArray(items)) continue;
+    const visible = (items as { period: string }[]).filter(({ period }) => isPeriodKnown(period, maxChapter));
+    if (visible.length !== items.length) removed.push(field);
+    if (visible.length > 0) copy[field] = visible;
+    else delete copy[field];
   }
 
   const identity = copy.revealed_identity as { chapter: number } | undefined;
