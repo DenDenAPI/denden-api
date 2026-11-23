@@ -111,6 +111,9 @@ export function buildOutput(dataset: Dataset, attribution: Attribution): BuildOu
   const relation = (value: Loose) => ({
     status: value.status,
     ...(value.canon ? { canon: value.canon } : {}),
+    ...(value.revealed_chapter !== undefined ? { revealed_chapter: value.revealed_chapter } : {}),
+    ...(value.kind ? { kind: value.kind } : {}),
+    ...(value.temporary ? { temporary: true } : {}),
   });
   const entityRef = (value: Loose) => ({
     type: value.type,
@@ -276,6 +279,9 @@ export function buildOutput(dataset: Dataset, attribution: Attribution): BuildOu
                 origin: {
                   ...(record.origin.location ? { location: ref("locations", record.origin.location) } : {}),
                   ...(record.origin.region ? { region: record.origin.region } : {}),
+                  ...(record.origin.revealed_chapter !== undefined
+                    ? { revealed_chapter: record.origin.revealed_chapter }
+                    : {}),
                 },
               }
             : {}),

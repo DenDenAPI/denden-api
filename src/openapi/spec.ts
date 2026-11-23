@@ -54,6 +54,10 @@ const REF = component("Reference");
 const REFS = arrayOf("Reference");
 const RELATIONS = arrayOf("RelationReference");
 const ENTITIES = arrayOf("EntityReference");
+const RELATION_KIND = {
+  type: "string",
+  enum: ["member", "rank", "captivity", "alliance", "collaboration", "family", "guardianship", "service"],
+};
 
 const RESPONSE_OVERRIDES: Record<CollectionName, JsonSchema> = {
   sagas: {},
@@ -72,7 +76,11 @@ const RESPONSE_OVERRIDES: Record<CollectionName, JsonSchema> = {
     devil_fruits: RELATIONS,
     origin: {
       type: "object",
-      properties: { location: REF, region: { type: "string" } },
+      properties: {
+        location: REF,
+        region: { type: "string" },
+        revealed_chapter: { type: "integer", minimum: 0 },
+      },
       additionalProperties: false,
     },
   },
@@ -91,10 +99,12 @@ function responseSchema(collection: CollectionName): JsonSchema {
   const redacted = new Set<string>(RESOURCES[collection].redact);
   schema.required = ["url", ...(schema.required as string[]).filter((name) => !redacted.has(name))];
 
-  const bountyItems = schema.properties.bounties?.items as JsonSchema | undefined;
-  if (bountyItems?.required) {
-    // The current/former status is hidden while a spoiler filter is active.
-    bountyItems.required = (bountyItems.required as string[]).filter((name) => name !== "status");
+  for (const field of ["bounties", "occupations"]) {
+    const items = schema.properties[field]?.items as JsonSchema | undefined;
+    if (items?.required) {
+      // The current/former status is hidden while a spoiler filter is active.
+      items.required = (items.required as string[]).filter((name) => name !== "status");
+    }
   }
   return schema;
 }
@@ -189,18 +199,21 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
     },
     RelationReference: {
       type: "object",
-      required: ["name", "url", "status"],
+      required: ["name", "url"],
       additionalProperties: false,
       properties: {
         name: { type: "string" },
         url: { type: "string", format: "uri" },
         status: { type: "string", enum: ["current", "former"] },
         canon: { type: "string", enum: ["manga", "anime_only", "movie", "other"] },
+        revealed_chapter: { type: "integer", minimum: 0 },
+        kind: RELATION_KIND,
+        temporary: { type: "boolean", enum: [true] },
       },
     },
     EntityReference: {
       type: "object",
-      required: ["type", "name", "url", "status"],
+      required: ["type", "name", "url"],
       additionalProperties: false,
       properties: {
         type: { type: "string", enum: ["crew", "organization", "location"] },
@@ -208,6 +221,9 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
         url: { type: "string", format: "uri" },
         status: { type: "string", enum: ["current", "former"] },
         canon: { type: "string", enum: ["manga", "anime_only", "movie", "other"] },
+        revealed_chapter: { type: "integer", minimum: 0 },
+        kind: RELATION_KIND,
+        temporary: { type: "boolean", enum: [true] },
       },
     },
     SpoilerFilter: {

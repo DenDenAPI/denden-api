@@ -101,6 +101,19 @@ const dataset: Dataset = {
       ],
     },
     {
+      slug: "mate",
+      name: { en: "Mate" },
+      canon: "manga",
+      status: "alive",
+      status_revealed_chapter: 2,
+      first_appearance: { chapter: 2 },
+      aliases: [{ en: "Early Alias", revealed_chapter: 2 }, { en: "Late Alias", revealed_chapter: 8 }, { en: "Unknown Alias" }],
+      occupations: [{ name: "Cook", status: "former", revealed_chapter: 2 }],
+      origin: { region: "East Blue", revealed_chapter: 3 },
+      ages: [{ years: 38, period: "other", revealed_chapter: 3 }],
+      affiliations: [{ type: "crew", slug: "test-pirates", status: "former", revealed_chapter: 2 }],
+    },
+    {
       slug: "villain",
       name: { en: "Villain" },
       canon: "manga",
@@ -188,7 +201,7 @@ describe("REST API", () => {
   it("publishes an OpenAPI document covering every resource", async () => {
     const spec = await json("/api/v1/openapi.json");
     expect(spec.openapi).toBe("3.1.0");
-    expect(spec.info["x-dataset"].counts.characters).toBe(2);
+    expect(spec.info["x-dataset"].counts.characters).toBe(3);
     for (const collection of COLLECTIONS) {
       expect(spec.paths[`/api/v1/${collection}`]).toBeDefined();
       expect(spec.paths[`/api/v1/${collection}/{id}`]).toBeDefined();
@@ -258,7 +271,7 @@ describe("spoiler filter", () => {
   it("hides records that appear after the chapter", async () => {
     expect((await request("/api/v1/characters/villain?until_chapter=3")).status).toBe(404);
     const list = await json("/api/v1/characters?until_chapter=3");
-    expect(list.results.map((item: { name: string }) => item.name)).toEqual(["Hero"]);
+    expect(list.results.map((item: { name: string }) => item.name)).toEqual(["Hero", "Mate"]);
   });
 
   it("removes fields that cannot be placed on the timeline", async () => {
@@ -276,6 +289,23 @@ describe("spoiler filter", () => {
     expect(before.ages).toEqual([{ years: 17, period: "debut" }]);
     expect(before.heights).toBeUndefined();
     expect(before.spoiler_filter.redacted).toEqual(expect.arrayContaining(["ages", "heights"]));
+  });
+
+  it("keeps values already revealed at the chapter", async () => {
+    const early = await json("/api/v1/characters/mate?until_chapter=2");
+    expect(early.status).toBe("alive");
+    expect(early.status_revealed_chapter).toBeUndefined();
+    expect(early.aliases).toEqual([{ en: "Early Alias", revealed_chapter: 2 }]);
+    expect(early.occupations).toEqual([{ name: "Cook", revealed_chapter: 2 }]);
+    expect(early.affiliations[0].status).toBeUndefined();
+    expect(early.origin).toBeUndefined();
+    expect(early.spoiler_filter.redacted).toEqual(expect.arrayContaining(["aliases", "origin"]));
+
+    const later = await json("/api/v1/characters/mate?until_chapter=8");
+    expect(later.aliases.map((alias: { en: string }) => alias.en)).toEqual(["Early Alias", "Late Alias"]);
+    expect(later.origin.region).toBe("East Blue");
+    expect(early.ages).toBeUndefined();
+    expect(later.ages).toEqual([{ years: 38, period: "other", revealed_chapter: 3 }]);
   });
 
   it("hides a revealed identity until its chapter", async () => {

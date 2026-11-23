@@ -348,12 +348,28 @@ function isPeriodKnown(period: string, maxChapter: number): boolean {
 function redact(definition: ResourceDefinition, body: Json, maxChapter: number): Json {
   const copy: Json = { ...body };
   const removed: string[] = [];
+  const isRevealed = (chapter: unknown) => typeof chapter === "number" && chapter <= maxChapter;
+
   for (const field of definition.redact) {
-    if (field in copy) {
-      delete copy[field];
-      removed.push(field);
+    if (!(field in copy)) continue;
+    const value = copy[field];
+    if (field === "status" && isRevealed(copy.status_revealed_chapter)) continue;
+    if (field === "origin" && isRevealed((value as { revealed_chapter?: number }).revealed_chapter)) continue;
+    if (Array.isArray(value)) {
+      const items = value as { revealed_chapter?: number; canon?: string; status?: string }[];
+      // The current/former status can reveal a later departure, so it stays hidden.
+      const visible = items
+        .filter((item) => !item.canon && isRevealed(item.revealed_chapter))
+        .map(({ status: _status, ...item }) => item);
+      if (visible.length < items.length || visible.length === 0) removed.push(field);
+      if (visible.length > 0) copy[field] = visible;
+      else delete copy[field];
+      continue;
     }
+    delete copy[field];
+    removed.push(field);
   }
+  delete copy.status_revealed_chapter;
 
   if (Array.isArray(copy.bounties)) {
     const bounties = copy.bounties as { revealed_chapter?: number; canon?: string; status: string }[];
@@ -368,7 +384,11 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
   for (const field of ["ages", "heights"]) {
     const items = copy[field];
     if (!Array.isArray(items)) continue;
-    const visible = (items as { period: string }[]).filter(({ period }) => isPeriodKnown(period, maxChapter));
+    const visible = (items as { period: string; revealed_chapter?: number }[]).filter((item) =>
+      item.revealed_chapter !== undefined
+        ? item.revealed_chapter <= maxChapter
+        : isPeriodKnown(item.period, maxChapter),
+    );
     if (visible.length !== items.length) removed.push(field);
     if (visible.length > 0) copy[field] = visible;
     else delete copy[field];
