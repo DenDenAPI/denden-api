@@ -89,6 +89,12 @@ const dataset: Dataset = {
       first_appearance: { chapter: 1 },
       aliases: [{ en: "Secret King" }],
       affiliations: [{ type: "crew", slug: "test-pirates", status: "current" }],
+      ages: [
+        { years: 17, period: "debut" },
+        { years: 19, period: "post_timeskip" },
+        { years: 40, period: "other" },
+      ],
+      heights: [{ cm: 180, period: "post_timeskip" }],
       bounties: [
         { amount: 100, status: "former", revealed_chapter: 2 },
         { amount: 900, status: "current", revealed_chapter: 8 },
@@ -263,6 +269,13 @@ describe("spoiler filter", () => {
     expect(body.devil_fruits).toBeUndefined();
     expect(body.bounties).toEqual([{ amount: 100, revealed_chapter: 2 }]);
     expect(body.spoiler_filter.redacted).toEqual(expect.arrayContaining(["status", "aliases", "bounties"]));
+  });
+
+  it("shows ages and heights according to the timeskip", async () => {
+    const before = await json("/api/v1/characters/hero?until_chapter=8");
+    expect(before.ages).toEqual([{ years: 17, period: "debut" }]);
+    expect(before.heights).toBeUndefined();
+    expect(before.spoiler_filter.redacted).toEqual(expect.arrayContaining(["ages", "heights"]));
   });
 
   it("hides a revealed identity until its chapter", async () => {
