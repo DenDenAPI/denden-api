@@ -308,6 +308,16 @@ describe("spoiler filter", () => {
     expect(later.ages).toEqual([{ years: 38, period: "other", revealed_chapter: 3 }]);
   });
 
+  it("does not reveal what a record hides through the filter metadata", async () => {
+    const hero = await json("/api/v1/characters/hero?until_chapter=8");
+    const mate = await json("/api/v1/characters/mate?until_chapter=8");
+    expect(hero.spoiler_filter.redacted).toEqual(mate.spoiler_filter.redacted);
+
+    const before = await json("/api/v1/devil-fruits/test-fruit?until_chapter=4");
+    const after = await json("/api/v1/devil-fruits/test-fruit?until_chapter=5");
+    expect(before.spoiler_filter.redacted).toEqual(after.spoiler_filter.redacted);
+  });
+
   it("hides a revealed identity until its chapter", async () => {
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=4")).revealed_identity).toBeUndefined();
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=5")).revealed_identity.type).toBe("zoan");

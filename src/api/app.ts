@@ -347,7 +347,6 @@ function isPeriodKnown(period: string, maxChapter: number): boolean {
 
 function redact(definition: ResourceDefinition, body: Json, maxChapter: number): Json {
   const copy: Json = { ...body };
-  const removed: string[] = [];
   const isRevealed = (chapter: unknown) => typeof chapter === "number" && chapter <= maxChapter;
 
   for (const field of definition.redact) {
@@ -361,13 +360,11 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
       const visible = items
         .filter((item) => !item.canon && isRevealed(item.revealed_chapter))
         .map(({ status: _status, ...item }) => item);
-      if (visible.length < items.length || visible.length === 0) removed.push(field);
       if (visible.length > 0) copy[field] = visible;
       else delete copy[field];
       continue;
     }
     delete copy[field];
-    removed.push(field);
   }
   delete copy.status_revealed_chapter;
 
@@ -376,7 +373,6 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     const visible = bounties
       .filter((item) => !item.canon && item.revealed_chapter !== undefined && item.revealed_chapter <= maxChapter)
       .map(({ status: _status, ...item }) => item);
-    if (visible.length !== bounties.length) removed.push("bounties");
     if (visible.length > 0) copy.bounties = visible;
     else delete copy.bounties;
   }
@@ -389,16 +385,12 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
         ? item.revealed_chapter <= maxChapter
         : isPeriodKnown(item.period, maxChapter),
     );
-    if (visible.length !== items.length) removed.push(field);
     if (visible.length > 0) copy[field] = visible;
     else delete copy[field];
   }
 
   const identity = copy.revealed_identity as { chapter: number } | undefined;
-  if (identity && identity.chapter > maxChapter) {
-    delete copy.revealed_identity;
-    removed.push("revealed_identity");
-  }
+  if (identity && identity.chapter > maxChapter) delete copy.revealed_identity;
 
   if (copy.links && typeof copy.links === "object") {
     const links = Object.entries(copy.links).filter(([name]) => definition.subresources[name]?.spoilerSafe);
@@ -409,6 +401,10 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     }
   }
 
-  copy.spoiler_filter = { until_chapter: maxChapter, redacted: removed };
+  // The list is the same for every record, so it cannot reveal what a record is hiding.
+  copy.spoiler_filter = {
+    until_chapter: maxChapter,
+    redacted: [...definition.redact, ...(definition.timelineFields ?? [])],
+  };
   return copy;
 }
