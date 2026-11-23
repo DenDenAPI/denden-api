@@ -26,6 +26,8 @@ export interface ResourceDefinition {
   subresources: Record<string, SpoilerRule>;
   /** Fields without chapter data, removed when a spoiler filter is active. */
   redact: readonly string[];
+  /** Other fields the spoiler filter can hide, handled with their own timeline rules. */
+  timelineFields?: readonly string[];
   /** False when records cannot be placed on the manga timeline. */
   supportsSpoilerFilter: boolean;
 }
@@ -81,6 +83,7 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
     defaultSort: "sort_name",
     subresources: { users: unsafe },
     redact: ["users"],
+    timelineFields: ["revealed_identity"],
     supportsSpoilerFilter: true,
   },
   crews: {
@@ -139,6 +142,7 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       "devil_fruits",
       "marine_rating",
     ],
+    timelineFields: ["bounties", "ages", "heights"],
     supportsSpoilerFilter: true,
   },
 };
