@@ -250,6 +250,25 @@ function checkCharacters(
         issues.push(`${label}: unknown bounty chapter ${bounty.revealed_chapter}`);
       }
     }
+    const revealed = [
+      character.status_revealed_chapter,
+      character.origin?.revealed_chapter,
+      ...[
+        ...(character.epithets ?? []),
+        ...(character.aliases ?? []),
+        ...(character.occupations ?? []),
+        ...(character.affiliations ?? []),
+        ...(character.residences ?? []),
+        ...(character.ages ?? []),
+      ].map((item) => item.revealed_chapter),
+    ].filter((chapter) => chapter !== undefined);
+    const debut = character.first_appearance?.chapter;
+    for (const chapter of revealed) {
+      if (!chapters.has(chapter)) issues.push(`${label}: unknown revealed chapter ${chapter}`);
+      if (debut === undefined || chapter < debut) {
+        issues.push(`${label}: revealed chapter ${chapter} is before the first appearance`);
+      }
+    }
   }
 }
 

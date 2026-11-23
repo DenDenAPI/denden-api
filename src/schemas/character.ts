@@ -4,6 +4,8 @@ import {
   EntityRefSchema,
   FirstAppearanceSchema,
   NameSchema,
+  RevealedChapterSchema,
+  RevealedNameSchema,
   SlugSchema,
 } from "./common.js";
 
@@ -41,11 +43,18 @@ export const CharacterSchema = z.strictObject({
   gender: z.enum(["male", "female"]).optional(),
   species: z.array(SpeciesSchema).min(1).optional(),
   status: z.enum(["alive", "deceased", "unknown"]),
+  status_revealed_chapter: RevealedChapterSchema.optional(),
   first_appearance: FirstAppearanceSchema.optional(),
-  epithets: z.array(NameSchema).min(1).optional(),
-  aliases: z.array(NameSchema).min(1).optional(),
+  epithets: z.array(RevealedNameSchema).min(1).optional(),
+  aliases: z.array(RevealedNameSchema).min(1).optional(),
   occupations: z
-    .array(z.strictObject({ name: z.string().min(1), status: z.enum(["current", "former"]) }))
+    .array(
+      z.strictObject({
+        name: z.string().min(1),
+        status: z.enum(["current", "former"]),
+        revealed_chapter: RevealedChapterSchema.optional(),
+      }),
+    )
     .min(1)
     .optional(),
   affiliations: z.array(EntityRefSchema).min(1).optional(),
@@ -53,6 +62,7 @@ export const CharacterSchema = z.strictObject({
     .strictObject({
       location: SlugSchema.optional(),
       region: z.string().min(1).optional(),
+      revealed_chapter: RevealedChapterSchema.optional(),
     })
     .optional(),
   residences: z.array(EntityRefSchema).min(1).optional(),
@@ -72,6 +82,7 @@ export const CharacterSchema = z.strictObject({
         years: z.number().int().nonnegative(),
         period: PeriodSchema,
         minimum: z.literal(true).optional(),
+        revealed_chapter: RevealedChapterSchema.optional(),
       }),
     )
     .min(1)

@@ -42,9 +42,17 @@ export const FirstAppearanceSchema = z.strictObject({
   episode: positiveInt.optional(),
 });
 
+/** Chapter by which a reader can know this value. Without it, spoiler filters hide the value. */
+export const RevealedChapterSchema = z.number().int().nonnegative();
+
+export const RevealedNameSchema = NameSchema.extend({
+  revealed_chapter: RevealedChapterSchema.optional(),
+});
+
 const relationFields = {
   status: z.enum(["current", "former"]),
   canon: CanonSchema.optional(),
+  revealed_chapter: RevealedChapterSchema.optional(),
 };
 
 export const CharacterRefSchema = z.strictObject({
@@ -52,10 +60,24 @@ export const CharacterRefSchema = z.strictObject({
   ...relationFields,
 });
 
+/** How a character is linked to a group. Without it, the link is plain membership. */
+export const RelationKindSchema = z.enum([
+  "member",
+  "rank",
+  "captivity",
+  "alliance",
+  "collaboration",
+  "family",
+  "guardianship",
+  "service",
+]);
+
 export const EntityRefSchema = z.strictObject({
   type: z.enum(["crew", "organization", "location"]),
   slug: SlugSchema,
   ...relationFields,
+  kind: RelationKindSchema.optional(),
+  temporary: z.literal(true).optional(),
 });
 
 export type Span = z.infer<typeof SpanSchema>;
