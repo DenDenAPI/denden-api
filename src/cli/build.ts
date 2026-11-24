@@ -19,12 +19,12 @@ if (issues.length > 0) {
 }
 
 const attribution = AttributionSchema.parse(parse(readFileSync(join(dataRoot, "ATTRIBUTION.yaml"), "utf8")));
-const output = buildOutput(dataset, attribution);
-
 const glossaryPath = join(dataRoot, "i18n", "es", "glossary.yaml");
-if (existsSync(glossaryPath)) {
-  output.documents.set("v1/i18n/es", GlossarySchema.parse(parse(readFileSync(glossaryPath, "utf8"))));
-}
+const glossary = existsSync(glossaryPath)
+  ? GlossarySchema.parse(parse(readFileSync(glossaryPath, "utf8")))
+  : undefined;
+const output = buildOutput(dataset, attribution, glossary);
+if (glossary) output.documents.set("v1/i18n/es", glossary);
 
 rmSync(outDir, { recursive: true, force: true });
 for (const [path, document] of output.documents) {

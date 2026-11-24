@@ -391,7 +391,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
         tags: ["search"],
         summary: "Search across all resources",
         parameters: [
-          { ...parameter("q", { type: "string", minLength: 1 }, "Search text."), required: true },
+          { ...parameter("q", { type: "string", minLength: 1 }, "Search text. Matches English, Japanese, romaji and Spanish names, with or without accents."), required: true },
           parameter("type", { type: "string", enum: [...COLLECTIONS] }, "Limit results to one resource."),
           PAGE,
           LIMIT,

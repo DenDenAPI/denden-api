@@ -142,16 +142,7 @@ const request = (path: string, init?: RequestInit) =>
 const json = async (path: string) => (await request(path)).json() as Promise<Record<string, any>>;
 
 beforeAll(() => {
-  const output = buildOutput(dataset, {
-    license: "CC BY-SA 3.0",
-    license_url: "https://creativecommons.org/licenses/by-sa/3.0/",
-    notice: "Test notice",
-    articles: articles(),
-  });
-  const database = new DatabaseSync(":memory:");
-  database.exec(SCHEMA);
-  for (const statement of insertStatements(output)) database.exec(statement);
-  output.documents.set("v1/i18n/es", {
+  const glossary: Glossary = {
     occupations: { Cook: ["Cocinero", "Cocinera"] },
     epithets: {},
     aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío" },
@@ -161,7 +152,23 @@ beforeAll(() => {
     species: {},
     regions: { "East Blue": "Mar del Este" },
     periods: { debut: "Debut" },
-  });
+    crews: { "Test Pirates": "Piratas de Pruebas" },
+    devil_fruits: { "Test Fruit": "Fruta Tesuto", "Secret Fruit": "Fruta Secreta" },
+  };
+  const output = buildOutput(
+    dataset,
+    {
+      license: "CC BY-SA 3.0",
+      license_url: "https://creativecommons.org/licenses/by-sa/3.0/",
+      notice: "Test notice",
+      articles: articles(),
+    },
+    glossary,
+  );
+  const database = new DatabaseSync(":memory:");
+  database.exec(SCHEMA);
+  for (const statement of insertStatements(output)) database.exec(statement);
+  output.documents.set("v1/i18n/es", glossary);
   ports = {
     assets: { get: async (path) => structuredClone(output.documents.get(path) ?? null) },
     queries: new SqlQueryStore(sqliteRunner(database)),
@@ -237,6 +244,19 @@ describe("Spanish translations", () => {
       name: "Straw Hat Pirates",
       url: "/api/v1/characters/x",
     });
+  });
+
+  it("finds records by their Spanish name, with or without accents", async () => {
+    const byName = await json("/api/v1/search?q=piratas&lang=es");
+    expect(byName.results.map((item: { name: string }) => item.name)).toEqual(["Piratas de Pruebas"]);
+    expect((await json("/api/v1/search?q=prueba")).results[0].name).toBe("Test Pirates");
+    expect((await json("/api/v1/search?q=ARCO&lang=es")).results[0].name).toBe("Primer arco");
+    expect((await json("/api/v1/search?q=tardio")).results[0].name).toBe("Mate");
+  });
+
+  it("does not reveal a translated hidden name through search", async () => {
+    expect((await json("/api/v1/search?q=secreta&until_chapter=4")).count).toBe(0);
+    expect((await json("/api/v1/search?q=secreta")).results[0].url).toMatch(/\/devil-fruits\/test-fruit$/);
   });
 
   it("translates only what the spoiler filter leaves visible", async () => {
