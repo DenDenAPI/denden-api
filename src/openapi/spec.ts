@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { CODE_LABELS } from "../api/i18n.js";
 import { COLLECTIONS, RESOURCES, type CollectionName } from "../api/resources.js";
 import { ArcSchema } from "../schemas/arc.js";
 import { ChapterSchema } from "../schemas/chapter.js";
@@ -98,6 +99,32 @@ function addLocalizedFields(collection: CollectionName, properties: JsonSchema):
   }
 }
 
+const CODE_KEYS = new Set(["canon", "gender", "status", "blood_type", "kind", "period", "sub_type", "species"]);
+
+const codeSchema = (values: unknown[]): JsonSchema => ({
+  type: "object",
+  required: ["id", "label"],
+  additionalProperties: false,
+  properties: {
+    id: { type: "string", enum: values },
+    label: { type: "string", description: "Text to display in the requested language." },
+  },
+});
+
+/** Technical codes are returned as `{ id, label }`. Reference `type` values stay plain strings. */
+function useCodeObjects(schema: JsonSchema, extraKeys: string[] = []): void {
+  if (!schema || typeof schema !== "object") return;
+  for (const [key, property] of Object.entries((schema.properties ?? {}) as JsonSchema)) {
+    if (CODE_KEYS.has(key) || extraKeys.includes(key)) {
+      if (property.enum) schema.properties[key] = codeSchema(property.enum);
+      else if (property.items?.enum) property.items = codeSchema(property.items.enum);
+      continue;
+    }
+    useCodeObjects(property);
+    useCodeObjects(property.items);
+  }
+}
+
 function responseSchema(collection: CollectionName): JsonSchema {
   const schema = z.toJSONSchema(SOURCE_SCHEMAS[collection], { target: "draft-2020-12" }) as JsonSchema;
   delete schema.$schema;
@@ -109,6 +136,8 @@ function responseSchema(collection: CollectionName): JsonSchema {
     spoiler_filter: component("SpoilerFilter"),
   };
   addLocalizedFields(collection, schema.properties);
+  useCodeObjects(schema, collection === "devil-fruits" ? ["type"] : []);
+  if (collection === "devil-fruits") useCodeObjects(schema.properties.revealed_identity, ["type"]);
   const redacted = new Set<string>(RESOURCES[collection].redact);
   schema.required = ["url", ...(schema.required as string[]).filter((name) => !redacted.has(name))];
 
@@ -185,7 +214,8 @@ const success = (schema: JsonSchema, description = "Successful response"): JsonS
 
 function filterSchema(collection: CollectionName, name: string, properties: JsonSchema): JsonSchema {
   const property = properties[name] as JsonSchema | undefined;
-  const values = property?.enum ?? property?.items?.enum;
+  const values =
+    property?.enum ?? property?.items?.enum ?? property?.properties?.id?.enum ?? property?.items?.properties?.id?.enum;
   return values ? { type: "string", enum: values } : { type: "string" };
 }
 
@@ -264,18 +294,31 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
     },
     Label: {
       type: "object",
-      required: ["default", "female"],
+      required: ["male", "female", "generic"],
       additionalProperties: false,
-      properties: { default: { type: "string" }, female: { type: "string" } },
+      properties: {
+        male: { type: "string" },
+        female: { type: "string" },
+        generic: { type: "string", description: "Form for records without a known gender." },
+      },
     },
     Labels: {
       type: "object",
-      required: ["language", "species", "periods"],
+      required: ["language", ...Object.keys(CODE_LABELS)],
       additionalProperties: false,
       properties: {
         language: { type: "string", enum: ["en", "es"] },
-        species: { type: "object", additionalProperties: component("Label") },
-        periods: { type: "object", additionalProperties: component("Label") },
+        ...Object.fromEntries(
+          Object.entries(CODE_LABELS).map(([section, codes]) => [
+            section,
+            {
+              type: "object",
+              required: Object.keys(codes),
+              additionalProperties: false,
+              properties: Object.fromEntries(Object.keys(codes).map((id) => [id, component("Label")])),
+            },
+          ]),
+        ),
       },
     },
     SearchResult: {
@@ -311,6 +354,8 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
     },
   };
 
+  useCodeObjects(schemas.RelationReference);
+  useCodeObjects(schemas.EntityReference);
   for (const collection of COLLECTIONS) schemas[SCHEMA_NAMES[collection]] = responseSchema(collection);
   schemas.Bounty = (schemas.Character as JsonSchema).properties.bounties.items;
 
@@ -335,7 +380,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
       get: {
         operationId: "getLabels",
         tags: ["general"],
-        summary: "Display text for species and period codes",
+        summary: "Display text for every technical code",
         parameters: [LANG],
         responses: { ...success(component("Labels")), ...errors(400) },
       },
