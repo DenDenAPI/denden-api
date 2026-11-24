@@ -191,7 +191,7 @@ describe("Spanish translations", () => {
     expect(body.aliases[0]).toMatchObject({ en: "Early Alias", label: "Alias temprano" });
     expect(body.aliases[2]).toMatchObject({ en: "Unknown Alias", label: "Unknown Alias" });
     expect(body.origin.region).toBe("Mar del Este");
-    expect(body.status).toBe("alive");
+    expect(body.status).toEqual({ id: "alive", label: "Alive" });
   });
 
   it("accepts a translated region in filters", () => {
@@ -229,16 +229,36 @@ describe("Spanish translations", () => {
     expect((await request("/api/v1/labels?lang=fr")).status).toBe(400);
   });
 
+  it("returns technical codes as id and label, using the character gender", () => {
+    const glossary = {
+      species: { human: ["Humano", "Humana"] },
+      character_statuses: { alive: ["Vivo", "Viva"] },
+      relation_statuses: { current: "Actual" },
+    } as unknown as Glossary;
+    const body = { gender: "female", species: ["human"], status: "alive", occupations: [{ name: "Cook", status: "current" }] };
+    const female = localizeBody("characters", body, glossary) as Record<string, any>;
+    expect(female.gender).toEqual({ id: "female", label: "Female" });
+    expect(female.species).toEqual([{ id: "human", label: "Humana" }]);
+    expect(female.status).toEqual({ id: "alive", label: "Viva" });
+    expect(female.occupations[0].status).toEqual({ id: "current", label: "Actual" });
+
+    const { gender: _gender, ...unknown } = body;
+    const generic = localizeBody("characters", unknown, glossary) as Record<string, any>;
+    expect(generic.gender).toBeUndefined();
+    expect(generic.species).toEqual([{ id: "human", label: "Humano" }]);
+  });
+
   it("serves display text for technical codes", async () => {
     const english = await json("/api/v1/labels");
     expect(english.language).toBe("en");
-    expect(english.species.fish_man).toEqual({ default: "Fish-Man", female: "Fish-Man" });
+    expect(english.species.fish_man).toEqual({ male: "Fish-Man", female: "Fish-Man", generic: "Fish-Man" });
+    expect(english.character_statuses.alive).toEqual({ male: "Alive", female: "Alive", generic: "Alive" });
 
     const glossary = { species: { human: ["Humano", "Humana"] }, periods: { debut: "Debut" } } as unknown as Glossary;
     const spanish = labelCatalog(glossary) as Record<string, any>;
     expect(spanish.language).toBe("es");
-    expect(spanish.species.human).toEqual({ default: "Humano", female: "Humana" });
-    expect(spanish.species.mink).toEqual({ default: "Mink", female: "Mink" });
+    expect(spanish.species.human).toEqual({ male: "Humano", female: "Humana", generic: "Humano" });
+    expect(spanish.species.mink).toEqual({ male: "Mink", female: "Mink", generic: "Mink" });
   });
 });
 
@@ -278,7 +298,7 @@ describe("REST API", () => {
 
   it("serves relations as subresources", async () => {
     const members = await json("/api/v1/crews/test-pirates/members");
-    expect(members.results[0]).toMatchObject({ name: "Hero", status: "current" });
+    expect(members.results[0]).toMatchObject({ name: "Hero", status: { id: "current", label: "Current" } });
     const bounties = await json("/api/v1/characters/hero/bounties");
     expect(bounties.results.map((item: { amount: number }) => item.amount)).toEqual([100, 900]);
     expect((await json("/api/v1/volumes/1/chapters?limit=1")).count).toBe(10);
@@ -372,14 +392,14 @@ describe("spoiler filter", () => {
 
   it("shows ages and heights according to the timeskip", async () => {
     const before = await json("/api/v1/characters/hero?until_chapter=8");
-    expect(before.ages).toEqual([{ years: 17, period: "debut" }]);
+    expect(before.ages).toEqual([{ years: 17, period: { id: "debut", label: "Debut" } }]);
     expect(before.heights).toBeUndefined();
     expect(before.spoiler_filter.redacted).toEqual(expect.arrayContaining(["ages", "heights"]));
   });
 
   it("keeps values already revealed at the chapter", async () => {
     const early = await json("/api/v1/characters/mate?until_chapter=2");
-    expect(early.status).toBe("alive");
+    expect(early.status).toEqual({ id: "alive", label: "Alive" });
     expect(early.status_revealed_chapter).toBeUndefined();
     expect(early.aliases).toEqual([{ en: "Early Alias", label: "Early Alias", revealed_chapter: 2 }]);
     expect(early.occupations).toEqual([{ name: "Cook", revealed_chapter: 2 }]);
@@ -391,7 +411,7 @@ describe("spoiler filter", () => {
     expect(later.aliases.map((alias: { en: string }) => alias.en)).toEqual(["Early Alias", "Late Alias"]);
     expect(later.origin.region).toBe("East Blue");
     expect(early.ages).toBeUndefined();
-    expect(later.ages).toEqual([{ years: 38, period: "other", revealed_chapter: 3 }]);
+    expect(later.ages).toEqual([{ years: 38, period: { id: "other", label: "Other" }, revealed_chapter: 3 }]);
   });
 
   it("does not reveal what a record hides through the filter metadata", async () => {
@@ -406,7 +426,7 @@ describe("spoiler filter", () => {
 
   it("hides a revealed identity until its chapter", async () => {
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=4")).revealed_identity).toBeUndefined();
-    expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=5")).revealed_identity.type).toBe("zoan");
+    expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=5")).revealed_identity.type).toEqual({ id: "zoan", label: "Zoan" });
   });
 
   it("does not leak spoilers through search", async () => {

@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { Glossary } from "../schemas/glossary.js";
-import { canonicalRegion, labelCatalog, localizeBody, localizeReferences } from "./i18n.js";
+import { canonicalRegion, labelCatalog, localizeBody, localizeItems, localizeReferences } from "./i18n.js";
 import type { Ports, QueryResult } from "./ports.js";
 import {
   isCollection,
@@ -333,8 +333,7 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
         maxChapter === undefined || (first_chapter !== null && first_chapter <= maxChapter),
     );
     const results = visible.slice(offset, offset + limit).map(({ item }) => item);
-    const localized = translations === undefined ? results : (localizeReferences(results, translations) as unknown[]);
-    return sendJson(c, paginated(c, visible.length, page, limit, localized));
+    return sendJson(c, paginated(c, visible.length, page, limit, localizeItems(results, translations)));
   });
 
   app.notFound((c) => problem(c, notFound()));
