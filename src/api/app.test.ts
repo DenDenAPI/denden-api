@@ -6,7 +6,9 @@ import { buildOutput } from "../build/model.js";
 import { insertStatements, SCHEMA } from "../build/sql.js";
 import type { Dataset } from "../data/validate.js";
 import type { Attribution } from "../schemas/attribution.js";
+import type { Glossary } from "../schemas/glossary.js";
 import { createApp } from "./app.js";
+import { canonicalRegion, labelCatalog, localizeBody } from "./i18n.js";
 import type { Ports } from "./ports.js";
 import { COLLECTIONS } from "./resources.js";
 
@@ -149,11 +151,95 @@ beforeAll(() => {
   const database = new DatabaseSync(":memory:");
   database.exec(SCHEMA);
   for (const statement of insertStatements(output)) database.exec(statement);
+  output.documents.set("v1/i18n/es", {
+    occupations: { Cook: ["Cocinero", "Cocinera"] },
+    epithets: {},
+    aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío" },
+    fruit_meanings: {},
+    arcs: { "First Arc": "Primer arco" },
+    sagas: { "First Saga": "Primera saga" },
+    species: {},
+    regions: { "East Blue": "Mar del Este" },
+    periods: { debut: "Debut" },
+  });
   ports = {
     assets: { get: async (path) => structuredClone(output.documents.get(path) ?? null) },
     queries: new SqlQueryStore(sqliteRunner(database)),
     rateLimiter: new MemoryRateLimiter(10_000),
   };
+});
+
+describe("Spanish translations", () => {
+  it("keeps English responses unchanged by default and with lang=en", async () => {
+    const plain = await json("/api/v1/characters/mate");
+    expect(plain.translation).toBeUndefined();
+    expect(plain.occupations[0].name).toBe("Cook");
+    expect(plain.aliases[0]).toMatchObject({ en: "Early Alias", label: "Early Alias" });
+    expect(await json("/api/v1/characters/mate?lang=en")).toEqual(plain);
+  });
+
+  it("uses the same keys in both languages and falls back when missing", async () => {
+    const english = await json("/api/v1/characters/mate");
+    const response = await request("/api/v1/characters/mate?lang=es");
+    expect(response.headers.get("Content-Language")).toBe("es");
+    const body = (await response.json()) as Record<string, any>;
+    const { translation, ...shared } = body;
+    expect(translation).toEqual({ language: "es", reviewed: false });
+    expect(Object.keys(shared).sort()).toEqual(Object.keys(english).sort());
+    expect(Object.keys(body.occupations[0]).sort()).toEqual(Object.keys(english.occupations[0]).sort());
+    expect(body.occupations[0].name).toBe("Cocinero");
+    expect(body.aliases[0]).toMatchObject({ en: "Early Alias", label: "Alias temprano" });
+    expect(body.aliases[2]).toMatchObject({ en: "Unknown Alias", label: "Unknown Alias" });
+    expect(body.origin.region).toBe("Mar del Este");
+    expect(body.status).toBe("alive");
+  });
+
+  it("accepts a translated region in filters", () => {
+    const glossary = { regions: { "East Blue": "Mar del Este" } } as unknown as Glossary;
+    expect(canonicalRegion(glossary, "Mar del Este")).toBe("East Blue");
+    expect(canonicalRegion(undefined, "East Blue")).toBe("East Blue");
+  });
+
+  it("uses the character gender for gendered values", () => {
+    const glossary = { occupations: { Cook: ["Cocinero", "Cocinera"] } } as unknown as Glossary;
+    const body = { gender: "female", occupations: [{ name: "Cook" }] };
+    const localized = localizeBody("characters", body, glossary) as { occupations: { name: string }[] };
+    expect(localized.occupations[0]?.name).toBe("Cocinera");
+  });
+
+  it("translates only what the spoiler filter leaves visible", async () => {
+    const body = await json("/api/v1/characters/mate?until_chapter=2&lang=es");
+    expect(body.aliases).toEqual([{ en: "Early Alias", revealed_chapter: 2, label: "Alias temprano" }]);
+    expect(JSON.stringify(body)).not.toContain("Alias tardío");
+    expect(body.origin).toBeUndefined();
+  });
+
+  it("translates arc and saga references and keeps lang in links", async () => {
+    const list = await json("/api/v1/arcs?lang=es&limit=1");
+    expect(list.results[0].name).toBe("Primer arco");
+    expect(list.next).toContain("lang=es");
+    const arc = await json("/api/v1/arcs/first-arc?lang=es");
+    expect(arc.name).toMatchObject({ en: "First Arc", label: "Primer arco" });
+    expect(arc.sagas[0].name).toBe("Primera saga");
+    expect(arc.links.chapters).toMatch(/\/chapters\?lang=es$/);
+  });
+
+  it("rejects unsupported languages", async () => {
+    expect((await request("/api/v1/characters?lang=fr")).status).toBe(400);
+    expect((await request("/api/v1/labels?lang=fr")).status).toBe(400);
+  });
+
+  it("serves display text for technical codes", async () => {
+    const english = await json("/api/v1/labels");
+    expect(english.language).toBe("en");
+    expect(english.species.fish_man).toEqual({ default: "Fish-Man", female: "Fish-Man" });
+
+    const glossary = { species: { human: ["Humano", "Humana"] }, periods: { debut: "Debut" } } as unknown as Glossary;
+    const spanish = labelCatalog(glossary) as Record<string, any>;
+    expect(spanish.language).toBe("es");
+    expect(spanish.species.human).toEqual({ default: "Humano", female: "Humana" });
+    expect(spanish.species.mink).toEqual({ default: "Mink", female: "Mink" });
+  });
 });
 
 describe("REST API", () => {
@@ -295,7 +381,7 @@ describe("spoiler filter", () => {
     const early = await json("/api/v1/characters/mate?until_chapter=2");
     expect(early.status).toBe("alive");
     expect(early.status_revealed_chapter).toBeUndefined();
-    expect(early.aliases).toEqual([{ en: "Early Alias", revealed_chapter: 2 }]);
+    expect(early.aliases).toEqual([{ en: "Early Alias", label: "Early Alias", revealed_chapter: 2 }]);
     expect(early.occupations).toEqual([{ name: "Cook", revealed_chapter: 2 }]);
     expect(early.affiliations[0].status).toBeUndefined();
     expect(early.origin).toBeUndefined();

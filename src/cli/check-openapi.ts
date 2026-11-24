@@ -72,6 +72,7 @@ for (const collection of COLLECTIONS) {
     for (const { url } of list.results) {
       const path = new URL(url).pathname;
       await check(path, validate);
+      await check(`${path}?lang=es`, validate);
       if (definition.supportsSpoilerFilter) {
         const redacted = await app.request(`https://api.test${path}?until_chapter=${lastChapter}`);
         if (redacted.status === 200) {
@@ -89,6 +90,8 @@ for (const collection of COLLECTIONS) {
 }
 
 await check("/api/v1/search?q=luffy&limit=100", pagedValidator("/api/v1/search"));
+await check("/api/v1/labels", validatorFor("Labels"));
+await check("/api/v1/labels?lang=es", validatorFor("Labels"));
 
 console.log(`Paths in OpenAPI: ${Object.keys(spec.paths).length}`);
 console.log(`Responses checked: ${checked}`);
