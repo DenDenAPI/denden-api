@@ -19,15 +19,30 @@ class FileAssetStore implements AssetStore {
 
 export class MemoryRateLimiter implements RateLimiter {
   private readonly windows = new Map<string, { start: number; count: number }>();
+  private lastSweep: number;
 
   constructor(
     private readonly limit = 60,
     private readonly windowMs = 60_000,
     private readonly now: () => number = Date.now,
-  ) {}
+  ) {
+    this.lastSweep = now();
+  }
+
+  /** Number of clients currently tracked. */
+  get size(): number {
+    return this.windows.size;
+  }
 
   async allow(key: string): Promise<boolean> {
     const time = this.now();
+    // Expired windows are dropped once per window, so memory follows recent traffic instead of every client ever seen.
+    if (time - this.lastSweep >= this.windowMs) {
+      for (const [client, window] of this.windows) {
+        if (time - window.start >= this.windowMs) this.windows.delete(client);
+      }
+      this.lastSweep = time;
+    }
     const current = this.windows.get(key);
     if (!current || time - current.start >= this.windowMs) {
       this.windows.set(key, { start: time, count: 1 });
