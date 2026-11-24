@@ -1,7 +1,9 @@
+import { nameSection, translatedForms } from "../api/i18n.js";
 import { COLLECTIONS, type CollectionName } from "../api/resources.js";
 import type { Dataset } from "../data/validate.js";
 import { createOpenApiDocument } from "../openapi/spec.js";
 import type { Attribution } from "../schemas/attribution.js";
+import type { Glossary } from "../schemas/glossary.js";
 
 // Records are validated before reaching this module and are handled generically here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -79,7 +81,8 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
   else map.set(key, [value]);
 }
 
-export function buildOutput(dataset: Dataset, attribution: Attribution): BuildOutput {
+/** `glossary` adds the Spanish names to the search index, so a search finds a record in either language. */
+export function buildOutput(dataset: Dataset, attribution: Attribution, glossary?: Glossary): BuildOutput {
   const entries = new Map<CollectionName, Map<string, { id: string; name: string; first: number | null }>>();
   for (const collection of COLLECTIONS) {
     const entry = new Map<string, { id: string; name: string; first: number | null }>();
@@ -337,12 +340,19 @@ export function buildOutput(dataset: Dataset, attribution: Attribution): BuildOu
         bounty: latestBounty?.amount ?? null,
       });
 
+      const section = nameSection(collection);
+      const spanish = (name: Loose | undefined, nameSectionKey = section): string[] =>
+        name?.en && nameSectionKey ? translatedForms(glossary, nameSectionKey, name.en) : [];
+      const named = (field: "epithets" | "aliases") =>
+        ((record[field] ?? []) as Loose[]).flatMap((item) => [nameText(item), ...spanish(item, field)]);
       const extras = [
-        ...((record.epithets ?? []) as Loose[]).map(nameText),
-        ...((record.aliases ?? []) as Loose[]).map(nameText),
+        ...named("epithets"),
+        ...named("aliases"),
         record.revealed_identity ? nameText(record.revealed_identity.name) : "",
+        ...spanish(record.revealed_identity?.name),
       ];
-      search.push({ collection, id, name: nameText(record.name), extra: extras.filter(Boolean).join(" ") });
+      const names = [nameText(record.name), ...spanish(record.name)];
+      search.push({ collection, id, name: names.join(" "), extra: extras.filter(Boolean).join(" ") });
 
       for (const field of ["canon", "kind", "status", "gender", "blood_type", "type", "sub_type", "region"]) {
         facet(collection, record.slug, field, record[field]);

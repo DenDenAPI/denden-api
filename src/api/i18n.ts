@@ -20,8 +20,17 @@ const NAME_SECTIONS = {
 
 const REFERENCE_URL = /^\/api\/v1\/([a-z-]+)\//;
 
-function nameSection(collection: string): keyof Glossary | undefined {
+export function nameSection(collection: string): keyof Glossary | undefined {
   return Object.hasOwn(NAME_SECTIONS, collection) ? NAME_SECTIONS[collection as keyof typeof NAME_SECTIONS] : undefined;
+}
+
+/** Every translated form of a text (both genders when there are two), or none. Used to index searches. */
+export function translatedForms(glossary: Glossary | undefined, section: keyof Glossary, text: string): string[] {
+  const rows = glossary?.[section];
+  if (!rows || !Object.hasOwn(rows, text)) return [];
+  const value = rows[text];
+  if (value === undefined) return [];
+  return typeof value === "string" ? [value] : [...value];
 }
 
 function translate(glossary: Translations, section: keyof Glossary, text: string, female = false): string {
