@@ -147,7 +147,7 @@ beforeAll(() => {
     epithets: {},
     aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío" },
     fruit_meanings: {},
-    arcs: { "First Arc": "Primer arco" },
+    arcs: { "First Arc": "Primer arco", "Late Arc": "Árbol tardío" },
     sagas: { "First Saga": "Primera saga" },
     species: {},
     regions: { "East Blue": "Mar del Este" },
@@ -251,7 +251,16 @@ describe("Spanish translations", () => {
     expect(byName.results.map((item: { name: string }) => item.name)).toEqual(["Piratas de Pruebas"]);
     expect((await json("/api/v1/search?q=prueba")).results[0].name).toBe("Test Pirates");
     expect((await json("/api/v1/search?q=ARCO&lang=es")).results[0].name).toBe("Primer arco");
-    expect((await json("/api/v1/search?q=tardio")).results[0].name).toBe("Mate");
+    expect((await json("/api/v1/search?q=tardio&type=characters")).results[0].name).toBe("Mate");
+  });
+
+  it("sorts by the name in the requested language, ignoring accents", async () => {
+    const names = async (path: string) =>
+      (await json(path)).results.map((item: { name: string }) => item.name);
+    expect(await names("/api/v1/arcs?sort=name")).toEqual(["First Arc", "Late Arc"]);
+    // "Árbol" sorts as "arbol", before "primer", not after "z".
+    expect(await names("/api/v1/arcs?sort=name&lang=es")).toEqual(["Árbol tardío", "Primer arco"]);
+    expect(await names("/api/v1/arcs?sort=-name&lang=es")).toEqual(["Primer arco", "Árbol tardío"]);
   });
 
   it("does not reveal a translated hidden name through search", async () => {

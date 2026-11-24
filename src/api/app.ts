@@ -312,6 +312,7 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       limit,
       offset,
       ...(maxChapter !== undefined ? { maxChapter } : {}),
+      ...(translations !== undefined ? { language: "es" as const } : {}),
     });
     const rows = resultRows(result);
     const localized = translations === undefined ? rows : (localizeReferences(rows, translations) as unknown[]);

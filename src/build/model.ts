@@ -15,6 +15,8 @@ export interface RecordRow {
   slug: string;
   name: string;
   sort_name: string;
+  /** Sort key of the Spanish name, or of the English one when there is no translation. */
+  sort_name_es: string;
   number: number | null;
   first_chapter: number | null;
   bounty: number | null;
@@ -81,8 +83,20 @@ function push<T>(map: Map<string, T[]>, key: string, value: T): void {
   else map.set(key, [value]);
 }
 
-/** `glossary` adds the Spanish names to the search index, so a search finds a record in either language. */
+/** SQLite compares bytes, so accents are removed to keep "Árbol" next to "arco" instead of after "z". */
+function spanishSortKey(text: string): string {
+  return text.normalize("NFD").replace(/\p{M}/gu, "").toLocaleLowerCase("es");
+}
+
+/**
+ * `glossary` adds the Spanish names to the search index, so a search finds a record in either language,
+ * and gives each record a Spanish sort key.
+ */
 export function buildOutput(dataset: Dataset, attribution: Attribution, glossary?: Glossary): BuildOutput {
+  const spanishName = (collection: CollectionName, name: string): string | undefined => {
+    const section = nameSection(collection);
+    return section ? translatedForms(glossary, section, name)[0] : undefined;
+  };
   const entries = new Map<CollectionName, Map<string, { id: string; name: string; first: number | null }>>();
   for (const collection of COLLECTIONS) {
     const entry = new Map<string, { id: string; name: string; first: number | null }>();
@@ -335,6 +349,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
         slug: record.slug,
         name,
         sort_name: name.toLocaleLowerCase("en"),
+        sort_name_es: spanishSortKey(spanishName(collection, name) ?? name),
         number: record.number ?? record.order ?? null,
         first_chapter: first,
         bounty: latestBounty?.amount ?? null,

@@ -15,12 +15,14 @@ CREATE TABLE records (
   slug TEXT NOT NULL,
   name TEXT NOT NULL,
   sort_name TEXT NOT NULL,
+  sort_name_es TEXT NOT NULL,
   number INTEGER,
   first_chapter INTEGER,
   bounty INTEGER,
   PRIMARY KEY (collection, id)
 );
 CREATE INDEX records_name ON records (collection, sort_name, id);
+CREATE INDEX records_name_es ON records (collection, sort_name_es, id);
 CREATE INDEX records_number ON records (collection, number, sort_name, id);
 CREATE INDEX records_first_chapter ON records (collection, first_chapter);
 CREATE INDEX records_bounty ON records (collection, bounty DESC, sort_name, id);
@@ -53,6 +55,7 @@ export function* insertStatements(output: BuildOutput): Generator<string> {
       row.slug,
       row.name,
       row.sort_name,
+      row.sort_name_es,
       row.number,
       row.first_chapter,
       row.bounty,

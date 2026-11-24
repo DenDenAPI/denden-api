@@ -44,12 +44,13 @@ export class SqlQueryStore implements QueryStore {
     }
 
     const where = conditions.join(" AND ");
-    const column = SORT_COLUMNS[query.sort.column];
+    const nameColumn = query.language === "es" ? "r.sort_name_es" : "r.sort_name";
+    const column = query.sort.column === "sort_name" ? nameColumn : SORT_COLUMNS[query.sort.column];
     const descending = query.sort.direction === "desc";
     const isNullable = query.sort.column === "first_chapter" || query.sort.column === "bounty";
     // SQLite already places NULL last when descending, which lets the index serve the sort.
     const nullsLast = isNullable && !descending ? `${column} IS NULL, ` : "";
-    const tieBreak = query.sort.column === "sort_name" ? "r.id" : "r.sort_name, r.id";
+    const tieBreak = query.sort.column === "sort_name" ? "r.id" : `${nameColumn}, r.id`;
     const isPlainList = query.filters.length === 0 && query.maxChapter === undefined;
     const [total] = isPlainList
       ? await this.run<{ count: number }>("SELECT count FROM collection_counts WHERE collection = ?", [

@@ -11,6 +11,8 @@ export interface ListQuery {
   limit: number;
   offset: number;
   maxChapter?: number;
+  /** Language whose names decide the order when sorting by name. English by default. */
+  language?: "es";
 }
 
 export interface SearchQuery {
