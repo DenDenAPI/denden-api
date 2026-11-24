@@ -403,6 +403,23 @@ describe("REST API", () => {
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get("retry-after")).toBe("60");
   });
+
+  it("forgets clients whose window has expired", async () => {
+    let time = 0;
+    const limiter = new MemoryRateLimiter(2, 1_000, () => time);
+    for (let client = 0; client < 500; client += 1) await limiter.allow(`ip-${client}`);
+    expect(limiter.size).toBe(500);
+
+    time = 1_000;
+    expect(await limiter.allow("new-client")).toBe(true);
+    expect(limiter.size).toBe(1);
+
+    expect(await limiter.allow("new-client")).toBe(true);
+    expect(await limiter.allow("new-client")).toBe(false);
+    time = 1_500;
+    await limiter.allow("other");
+    expect(await limiter.allow("new-client")).toBe(false);
+  });
 });
 
 describe("spoiler filter", () => {
