@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { Glossary } from "../schemas/glossary.js";
 import { canonicalRegion, labelCatalog, localizeBody, localizeItems, localizeReferences } from "./i18n.js";
-import type { Ports, QueryResult } from "./ports.js";
+import type { Covers, Ports, QueryResult } from "./ports.js";
 import {
   isCollection,
   normalizeId,
@@ -195,6 +195,18 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     }
   };
 
+  let covers: Promise<Covers> | undefined;
+  const coverMap = (): Promise<Covers> => {
+    covers ??= assets.get("v1/covers").then((document) => (document ?? {}) as Covers);
+    return covers;
+  };
+
+  /** Shows a character's cover name (Kyoshiro) instead of the real one (Denjiro) while the reader cannot know it. */
+  const withCovers = async <T>(value: T, maxChapter: number | undefined): Promise<T> => {
+    if (maxChapter === undefined) return value;
+    return coverReferences(value, await coverMap(), maxChapter) as T;
+  };
+
   const resultRows = (result: QueryResult) =>
     result.rows.map((row) => ({ name: row.name, url: `/api/v1/${row.collection}/${row.id}` }));
 
@@ -339,7 +351,13 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     if (maxChapter !== undefined && (document.first_chapter === null || document.first_chapter > maxChapter)) {
       throw notFound();
     }
-    const body = maxChapter === undefined ? document.body : redact(definition, document.body, maxChapter);
+    let body = maxChapter === undefined ? document.body : redact(definition, document.body, maxChapter);
+    if (maxChapter !== undefined) {
+      body = await withCovers(body, maxChapter);
+      const id = normalizeId(collection, c.req.param("id"));
+      const cover = collection === "characters" ? (await coverMap())[id] : undefined;
+      if (cover && cover.until >= maxChapter) body = coverBody(body, cover);
+    }
     return sendJson(c, localizeBody(collection, body, translations));
   });
 
@@ -371,7 +389,10 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       ({ first_chapter }) =>
         maxChapter === undefined || (first_chapter !== null && first_chapter <= maxChapter),
     );
-    const results = visible.slice(offset, offset + limit).map(({ item }) => item);
+    const results = await withCovers(
+      visible.slice(offset, offset + limit).map(({ item }) => item),
+      maxChapter,
+    );
     return sendJson(c, paginated(c, visible.length, page, limit, localizeItems(results, translations)));
   });
 
@@ -403,6 +424,32 @@ function problem(c: Context, error: ApiError): Response {
   );
 }
 
+const CHARACTER_URL = /^\/api\/v1\/characters\/([a-z0-9-]+)$/;
+
+/** Renames every reference to a character that is still known by a cover name. */
+function coverReferences(value: unknown, covers: Covers, maxChapter: number): unknown {
+  if (Array.isArray(value)) return value.map((item) => coverReferences(item, covers, maxChapter));
+  if (!value || typeof value !== "object") return value;
+  const copy = Object.fromEntries(
+    Object.entries(value).map(([key, item]) => [key, coverReferences(item, covers, maxChapter)]),
+  ) as Json;
+  const id = typeof copy.url === "string" ? CHARACTER_URL.exec(copy.url)?.[1] : undefined;
+  const cover = id ? covers[id] : undefined;
+  if (cover && cover.until >= maxChapter && typeof copy.name === "string") copy.name = cover.name.en;
+  return copy;
+}
+
+/** The cover name replaces the record name and leaves the alias list. */
+function coverBody(body: Json, cover: Covers[string]): Json {
+  const copy: Json = { ...body, name: cover.name };
+  if (Array.isArray(copy.aliases)) {
+    const aliases = (copy.aliases as { en: string }[]).filter((alias) => alias.en !== cover.name.en);
+    if (aliases.length > 0) copy.aliases = aliases;
+    else delete copy.aliases;
+  }
+  return copy;
+}
+
 /** First chapter set after the two-year timeskip. */
 const POST_TIMESKIP_CHAPTER = 598;
 
@@ -422,11 +469,12 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     if (field === "status" && isRevealed(copy.status_revealed_chapter)) continue;
     if (field === "origin" && isRevealed((value as { revealed_chapter?: number }).revealed_chapter)) continue;
     if (Array.isArray(value)) {
-      const items = value as { revealed_chapter?: number; canon?: string; status?: string }[];
+      const items = value as { revealed_chapter?: number; canon?: string; status?: string; cover_until?: number }[];
       // The current/former status can reveal a later departure, so it stays hidden.
+      // `cover_until` would tell when a false name is exposed, so it stays hidden too.
       const visible = items
         .filter((item) => !item.canon && isRevealed(item.revealed_chapter))
-        .map(({ status: _status, ...item }) => item);
+        .map(({ status: _status, cover_until: _cover, ...item }) => item);
       if (visible.length > 0) copy[field] = visible;
       else delete copy[field];
       continue;

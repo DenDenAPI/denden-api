@@ -19,6 +19,10 @@ CREATE TABLE records (
   number INTEGER,
   first_chapter INTEGER,
   bounty INTEGER,
+  cover_name TEXT,
+  cover_sort_name TEXT,
+  cover_sort_name_es TEXT,
+  cover_until INTEGER,
   PRIMARY KEY (collection, id)
 );
 CREATE INDEX records_name ON records (collection, sort_name, id);
@@ -59,6 +63,10 @@ export function* insertStatements(output: BuildOutput): Generator<string> {
       row.number,
       row.first_chapter,
       row.bounty,
+      row.cover_name,
+      row.cover_sort_name,
+      row.cover_sort_name_es,
+      row.cover_until,
     ].map(literal);
     yield `INSERT INTO records VALUES (${values.join(",")});`;
   }

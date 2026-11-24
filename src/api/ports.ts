@@ -29,6 +29,12 @@ export interface ResultRow {
   name: string;
 }
 
+/**
+ * The `v1/covers` asset: characters the reader first knows by a false name, keyed by public id.
+ * Until `until`, spoiler-filtered responses show `name` instead of the real name.
+ */
+export type Covers = Record<string, { name: { en: string; ja?: string; romaji?: string }; until: number }>;
+
 export interface QueryResult {
   count: number;
   rows: ResultRow[];

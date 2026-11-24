@@ -142,7 +142,8 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       "devil_fruits",
       "marine_rating",
     ],
-    timelineFields: ["bounties", "ages", "heights"],
+    // "name" may show a cover name (Kyoshiro) instead of the real one while it is a spoiler.
+    timelineFields: ["name", "bounties", "ages", "heights"],
     supportsSpoilerFilter: true,
   },
 };

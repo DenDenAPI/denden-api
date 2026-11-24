@@ -17,6 +17,15 @@ function matchExpression(terms: string[], spoilerSafe: boolean): string {
   return spoilerSafe ? `{name} : (${expression})` : `{name extra} : (${expression})`;
 }
 
+/**
+ * With a spoiler limit, a character still known by a cover name (Kyoshiro) is listed, named and sorted by it.
+ * Each expression takes the limit as its only parameter.
+ */
+function coveredColumn(column: string, cover: string, maxChapter: number | undefined): { sql: string; params: SqlValue[] } {
+  if (maxChapter === undefined) return { sql: column, params: [] };
+  return { sql: `CASE WHEN r.cover_until >= ? THEN ${cover} ELSE ${column} END`, params: [maxChapter] };
+}
+
 export class SqlQueryStore implements QueryStore {
   constructor(private readonly run: SqlRunner) {}
 
@@ -44,13 +53,21 @@ export class SqlQueryStore implements QueryStore {
     }
 
     const where = conditions.join(" AND ");
-    const nameColumn = query.language === "es" ? "r.sort_name_es" : "r.sort_name";
-    const column = query.sort.column === "sort_name" ? nameColumn : SORT_COLUMNS[query.sort.column];
+    const spanish = query.language === "es";
+    const name = coveredColumn("r.name", "r.cover_name", query.maxChapter);
+    const sortName = coveredColumn(
+      spanish ? "r.sort_name_es" : "r.sort_name",
+      spanish ? "r.cover_sort_name_es" : "r.cover_sort_name",
+      query.maxChapter,
+    );
+    const byName = query.sort.column === "sort_name";
+    const column = byName ? sortName.sql : SORT_COLUMNS[query.sort.column];
     const descending = query.sort.direction === "desc";
     const isNullable = query.sort.column === "first_chapter" || query.sort.column === "bounty";
     // SQLite already places NULL last when descending, which lets the index serve the sort.
     const nullsLast = isNullable && !descending ? `${column} IS NULL, ` : "";
-    const tieBreak = query.sort.column === "sort_name" ? "r.id" : `${nameColumn}, r.id`;
+    // The name sort key appears once in ORDER BY: as the sort column or as the tie break.
+    const tieBreak = byName ? "r.id" : `${sortName.sql}, r.id`;
     const isPlainList = query.filters.length === 0 && query.maxChapter === undefined;
     const [total] = isPlainList
       ? await this.run<{ count: number }>("SELECT count FROM collection_counts WHERE collection = ?", [
@@ -58,9 +75,9 @@ export class SqlQueryStore implements QueryStore {
         ])
       : await this.run<{ count: number }>(`SELECT COUNT(*) AS count ${from} WHERE ${where}`, params);
     const rows = await this.run<ResultRow>(
-      `SELECT r.collection, r.id, r.name ${from} WHERE ${where}
+      `SELECT r.collection, r.id, ${name.sql} AS name ${from} WHERE ${where}
        ORDER BY ${nullsLast}${column} ${descending ? "DESC" : "ASC"}, ${tieBreak} LIMIT ? OFFSET ?`,
-      [...params, query.limit, query.offset],
+      [...name.params, ...params, ...sortName.params, query.limit, query.offset],
     );
     return { count: total?.count ?? 0, rows };
   }
@@ -79,11 +96,13 @@ export class SqlQueryStore implements QueryStore {
 
     const from = "FROM search_index JOIN records r ON r.collection = search_index.collection AND r.id = search_index.id";
     const where = conditions.join(" AND ");
+    const name = coveredColumn("r.name", "r.cover_name", query.maxChapter);
+    const sortName = coveredColumn("r.sort_name", "r.cover_sort_name", query.maxChapter);
     const [total] = await this.run<{ count: number }>(`SELECT COUNT(*) AS count ${from} WHERE ${where}`, params);
     const rows = await this.run<ResultRow>(
-      `SELECT r.collection, r.id, r.name ${from} WHERE ${where}
-       ORDER BY bm25(search_index), r.sort_name, r.id LIMIT ? OFFSET ?`,
-      [...params, query.limit, query.offset],
+      `SELECT r.collection, r.id, ${name.sql} AS name ${from} WHERE ${where}
+       ORDER BY bm25(search_index), ${sortName.sql}, r.id LIMIT ? OFFSET ?`,
+      [...name.params, ...params, ...sortName.params, query.limit, query.offset],
     );
     return { count: total?.count ?? 0, rows };
   }

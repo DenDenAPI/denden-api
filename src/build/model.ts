@@ -1,4 +1,5 @@
 import { nameSection, translatedForms } from "../api/i18n.js";
+import type { Covers } from "../api/ports.js";
 import { COLLECTIONS, type CollectionName } from "../api/resources.js";
 import type { Dataset } from "../data/validate.js";
 import { createOpenApiDocument } from "../openapi/spec.js";
@@ -20,6 +21,18 @@ export interface RecordRow {
   number: number | null;
   first_chapter: number | null;
   bounty: number | null;
+  /** Name shown by spoiler-filtered responses up to `cover_until` (see the character alias schema). */
+  cover_name: string | null;
+  cover_sort_name: string | null;
+  cover_sort_name_es: string | null;
+  cover_until: number | null;
+}
+
+function coverOf(record: Loose): Covers[string] | undefined {
+  const alias = ((record.aliases ?? []) as Loose[]).find((item) => item.cover_until !== undefined);
+  if (!alias) return undefined;
+  const { revealed_chapter: _revealed, cover_until: until, ...name } = alias;
+  return { name: name as Covers[string]["name"], until };
 }
 
 export interface FacetRow {
@@ -223,6 +236,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
   const documents = new Map<string, unknown>();
   const records: RecordRow[] = [];
   const search: SearchRow[] = [];
+  const covers: Covers = {};
 
   const linksFor = (collection: CollectionName, record: Loose, names: string[]) => {
     const url = urlOf(collection, record.slug);
@@ -343,6 +357,8 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
       const bounties: Loose[] = record.bounties ?? [];
       // Deceased characters keep their last bounty, which the source marks as former.
       const latestBounty = bounties.filter((item) => !item.canon).at(-1);
+      const cover = collection === "characters" ? coverOf(record) : undefined;
+      if (cover) covers[id] = cover;
       records.push({
         collection,
         id,
@@ -353,6 +369,10 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
         number: record.number ?? record.order ?? null,
         first_chapter: first,
         bounty: latestBounty?.amount ?? null,
+        cover_name: cover?.name.en ?? null,
+        cover_sort_name: cover ? cover.name.en.toLocaleLowerCase("en") : null,
+        cover_sort_name_es: cover ? spanishSortKey(cover.name.en) : null,
+        cover_until: cover?.until ?? null,
       });
 
       const section = nameSection(collection);
@@ -367,7 +387,10 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
         ...spanish(record.revealed_identity?.name),
       ];
       const names = [nameText(record.name), ...spanish(record.name)];
-      search.push({ collection, id, name: names.join(" "), extra: extras.filter(Boolean).join(" ") });
+      // A covered character's real name is a spoiler, so spoiler-safe search only sees the cover name.
+      const searchName = cover ? [nameText(cover.name)] : names;
+      const searchExtra = cover ? [...names, ...extras] : extras;
+      search.push({ collection, id, name: searchName.join(" "), extra: searchExtra.filter(Boolean).join(" ") });
 
       for (const field of ["canon", "kind", "status", "gender", "blood_type", "type", "sub_type", "region"]) {
         facet(collection, record.slug, field, record[field]);
@@ -398,6 +421,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
     documents.set(`v1/${collection}/${id}/${name}`, { items });
   }
 
+  documents.set("v1/covers", covers);
   documents.set("v1/index", {
     name: "DenDen API",
     description: "Unofficial REST API for One Piece data.",

@@ -36,6 +36,14 @@ export const SpeciesSchema = z.enum([
   "robot",
 ]);
 
+/**
+ * `cover_until` marks a false or provisional name (Klahadore, Kyoshiro): until that chapter the reader
+ * knows the character only by this alias, so spoiler-filtered responses show it as the name.
+ */
+const AliasSchema = RevealedNameSchema.extend({
+  cover_until: RevealedChapterSchema.optional(),
+});
+
 export const CharacterSchema = z.strictObject({
   slug: SlugSchema,
   name: NameSchema,
@@ -46,7 +54,7 @@ export const CharacterSchema = z.strictObject({
   status_revealed_chapter: RevealedChapterSchema.optional(),
   first_appearance: FirstAppearanceSchema.optional(),
   epithets: z.array(RevealedNameSchema).min(1).optional(),
-  aliases: z.array(RevealedNameSchema).min(1).optional(),
+  aliases: z.array(AliasSchema).min(1).optional(),
   occupations: z
     .array(
       z.strictObject({
