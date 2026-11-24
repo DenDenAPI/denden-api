@@ -7,7 +7,22 @@ type NameMap = { en?: string; ja?: string; romaji?: string };
 /** Undefined means the default English response. */
 type Translations = Glossary | null | undefined;
 
-const REFERENCE_URL = /^\/api\/v1\/(arcs|sagas)\//;
+/** Collections whose record names have a glossary section, keyed by collection. */
+const NAME_SECTIONS = {
+  arcs: "arcs",
+  sagas: "sagas",
+  crews: "crews",
+  organizations: "organizations",
+  locations: "locations",
+  ships: "ships",
+  "devil-fruits": "devil_fruits",
+} as const satisfies Partial<Record<CollectionName, keyof Glossary>>;
+
+const REFERENCE_URL = /^\/api\/v1\/([a-z-]+)\//;
+
+function nameSection(collection: string): keyof Glossary | undefined {
+  return Object.hasOwn(NAME_SECTIONS, collection) ? NAME_SECTIONS[collection as keyof typeof NAME_SECTIONS] : undefined;
+}
 
 function translate(glossary: Translations, section: keyof Glossary, text: string, female = false): string {
   const rows = glossary?.[section];
@@ -17,7 +32,7 @@ function translate(glossary: Translations, section: keyof Glossary, text: string
   return typeof value === "string" ? value : value[female ? 1 : 0];
 }
 
-/** Arc and saga references are the only reference names with a translation. */
+/** Translates the name of every reference whose collection has a name glossary. */
 export function localizeReferences(value: unknown, glossary: Translations): unknown {
   if (Array.isArray(value)) return value.map((item) => localizeReferences(item, glossary));
   if (!value || typeof value !== "object") return value;
@@ -25,8 +40,9 @@ export function localizeReferences(value: unknown, glossary: Translations): unkn
     Object.entries(value).map(([key, item]) => [key, localizeReferences(item, glossary)]),
   ) as Json;
   const match = typeof copy.url === "string" ? REFERENCE_URL.exec(copy.url) : null;
-  if (match && typeof copy.name === "string") {
-    copy.name = translate(glossary, match[1] as "arcs" | "sagas", copy.name);
+  const section = match ? nameSection(match[1] as string) : undefined;
+  if (section && typeof copy.name === "string") {
+    copy.name = translate(glossary, section, copy.name);
   }
   return copy;
 }
@@ -179,7 +195,6 @@ function applyCodes(collection: CollectionName, body: Json, glossary: Translatio
   }
 }
 
-const withLanguage = (url: string) => `${url}${url.includes("?") ? "&" : "?"}lang=es`;
 
 function labeled<T extends NameMap>(name: T, label?: string): T & { label: string } {
   return { ...name, label: label ?? name.en ?? name.romaji ?? name.ja ?? "" };
@@ -195,16 +210,14 @@ export function localizeBody(collection: CollectionName, body: Json, glossary: T
   // Read before `gender` becomes `{ id, label }`.
   const female = copy.gender === "female";
 
+  const section = nameSection(collection);
+  const translatedName = (name: NameMap) => (name.en && section ? translate(glossary, section, name.en) : undefined);
   if (copy.name && typeof copy.name === "object") {
     const name = copy.name as NameMap;
-    const translated =
-      name.en && (collection === "arcs" || collection === "sagas")
-        ? translate(glossary, collection, name.en)
-        : undefined;
-    copy.name = labeled(name, translated);
+    copy.name = labeled(name, translatedName(name));
   }
   const identity = copy.revealed_identity as { name?: NameMap } | undefined;
-  if (identity?.name) copy.revealed_identity = { ...identity, name: labeled(identity.name) };
+  if (identity?.name) copy.revealed_identity = { ...identity, name: labeled(identity.name, translatedName(identity.name)) };
 
   if (collection === "characters") {
     for (const field of ["epithets", "aliases"] as const) {
@@ -236,11 +249,6 @@ export function localizeBody(collection: CollectionName, body: Json, glossary: T
     }
     const origin = copy.origin as { region?: string } | undefined;
     if (origin?.region) copy.origin = { ...origin, region: translate(glossary, "regions", origin.region) };
-  }
-  if (copy.links && typeof copy.links === "object") {
-    copy.links = Object.fromEntries(
-      Object.entries(copy.links).map(([name, url]) => [name, withLanguage(url as string)]),
-    );
   }
   copy.translation = { language: "es", reviewed: false };
   return copy;

@@ -25,6 +25,11 @@ export const GlossarySchema = z.strictObject({
   episode_kinds: SectionSchema.optional(),
   fruit_types: SectionSchema.optional(),
   fruit_sub_types: SectionSchema.optional(),
+  crews: SectionSchema.optional(),
+  organizations: SectionSchema.optional(),
+  locations: SectionSchema.optional(),
+  ships: SectionSchema.optional(),
+  devil_fruits: SectionSchema.optional(),
 });
 
 export type Glossary = z.infer<typeof GlossarySchema>;

@@ -8,7 +8,7 @@ import type { Dataset } from "../data/validate.js";
 import type { Attribution } from "../schemas/attribution.js";
 import type { Glossary } from "../schemas/glossary.js";
 import { createApp } from "./app.js";
-import { canonicalRegion, labelCatalog, localizeBody } from "./i18n.js";
+import { canonicalRegion, labelCatalog, localizeBody, localizeReferences } from "./i18n.js";
 import type { Ports } from "./ports.js";
 import { COLLECTIONS } from "./resources.js";
 
@@ -205,6 +205,38 @@ describe("Spanish translations", () => {
     const body = { gender: "female", occupations: [{ name: "Cook" }] };
     const localized = localizeBody("characters", body, glossary) as { occupations: { name: string }[] };
     expect(localized.occupations[0]?.name).toBe("Cocinera");
+  });
+
+  it("translates record names and the names of references to them", () => {
+    const glossary = {
+      crews: { "Straw Hat Pirates": "Piratas del Sombrero de Paja" },
+      devil_fruits: { "Gum-Gum Fruit": "Fruta Gomu Gomu", "Human-Human Fruit, Model: Nika": "Fruta Hito Hito, modelo Nika" },
+    } as unknown as Glossary;
+    const crew = localizeBody("crews", { name: { en: "Straw Hat Pirates", ja: "麦わらの一味" } }, glossary) as Record<string, any>;
+    expect(crew.name).toEqual({ en: "Straw Hat Pirates", ja: "麦わらの一味", label: "Piratas del Sombrero de Paja" });
+
+    const fruit = localizeBody(
+      "devil-fruits",
+      { name: { en: "Gum-Gum Fruit" }, revealed_identity: { name: { en: "Human-Human Fruit, Model: Nika" } } },
+      glossary,
+    ) as Record<string, any>;
+    expect(fruit.name.label).toBe("Fruta Gomu Gomu");
+    expect(fruit.revealed_identity.name.label).toBe("Fruta Hito Hito, modelo Nika");
+
+    const character = localizeBody(
+      "characters",
+      {
+        name: { en: "Monkey D. Luffy" },
+        affiliations: [{ type: "crew", name: "Straw Hat Pirates", url: "/api/v1/crews/straw-hat-pirates" }],
+      },
+      glossary,
+    ) as Record<string, any>;
+    expect(character.name.label).toBe("Monkey D. Luffy");
+    expect(character.affiliations[0].name).toBe("Piratas del Sombrero de Paja");
+    expect(localizeReferences({ name: "Straw Hat Pirates", url: "/api/v1/characters/x" }, glossary)).toEqual({
+      name: "Straw Hat Pirates",
+      url: "/api/v1/characters/x",
+    });
   });
 
   it("translates only what the spoiler filter leaves visible", async () => {
@@ -440,6 +472,47 @@ describe("spoiler filter", () => {
     expect((await request("/api/v1/crews/test-pirates/members?until_chapter=3")).status).toBe(400);
     expect((await request("/api/v1/episodes?until_chapter=3")).status).toBe(400);
     expect((await request("/api/v1/characters?until_chapter=99")).status).toBe(400);
+  });
+
+  it("keeps the chapter and language in every API URL it returns", async () => {
+    const mate = await json("/api/v1/characters/mate?until_chapter=2&lang=es");
+    expect(mate.affiliations[0].url).toMatch(/\/api\/v1\/[a-z-]+\/[a-z0-9-]+\?until_chapter=2&lang=es$/);
+
+    const list = await json("/api/v1/characters?until_chapter=3&lang=es&limit=1");
+    expect(list.results[0].url).toMatch(/\/characters\/hero\?until_chapter=3&lang=es$/);
+    expect(list.next).toMatch(/\?until_chapter=3&lang=es&limit=1&page=2$/);
+
+    const arcs = await json("/api/v1/sagas/first-saga/arcs?until_chapter=3");
+    expect(arcs.results[0].url).toMatch(/\/arcs\/first-arc\?until_chapter=3$/);
+
+    const english = await json("/api/v1/characters/mate?lang=en");
+    expect(english.affiliations[0].url).not.toContain("?");
+  });
+
+  it("returns only API URLs that can be followed as they are", async () => {
+    const urls = (value: unknown): string[] =>
+      typeof value === "string"
+        ? /^https?:\/\/[^/]+\/api\//.test(value) ? [value.replace(/^https?:\/\/[^/]+/, "")] : []
+        : value && typeof value === "object"
+          ? Object.values(value).flatMap(urls)
+          : [];
+    const pages = [
+      "/api/v1/characters/mate?until_chapter=8&lang=es",
+      "/api/v1/characters/hero?until_chapter=8&lang=es",
+      "/api/v1/arcs/first-arc?until_chapter=3&lang=es",
+      "/api/v1/sagas/first-saga?until_chapter=3&lang=es",
+      "/api/v1/crews/test-pirates?until_chapter=3&lang=es",
+      "/api/v1/devil-fruits/test-fruit?until_chapter=5&lang=es",
+    ];
+    let followed = 0;
+    for (const page of pages) {
+      for (const url of urls(await json(page))) {
+        const response = await request(url);
+        expect([200, 404], url).toContain(response.status);
+        followed += 1;
+      }
+    }
+    expect(followed).toBeGreaterThan(5);
   });
 
   it("filters safe subresources by chapter", async () => {
