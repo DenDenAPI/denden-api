@@ -44,12 +44,50 @@ function badRequest(detail: string): ApiError {
   return new ApiError(400, "Bad Request", detail);
 }
 
-function withOrigin(value: unknown, origin: string): unknown {
-  if (typeof value === "string") return value.startsWith("/api/") ? `${origin}${value}` : value;
-  if (Array.isArray(value)) return value.map((item) => withOrigin(item, origin));
+/** Parameters that say how to show the data, not which data to return, so every URL in a response keeps them. */
+interface ViewContext {
+  lang?: string;
+  untilChapter?: string;
+}
+
+function viewContext(requestUrl: string): ViewContext {
+  const params = new URL(requestUrl).searchParams;
+  const lang = params.get("lang");
+  const untilChapter = params.get("until_chapter");
+  return {
+    ...(lang && lang !== "en" ? { lang } : {}),
+    ...(untilChapter !== null ? { untilChapter } : {}),
+  };
+}
+
+const API_PATH = /^\/api\/v1\/([a-z-]+)(?:\/[^/?]+(?:\/([a-z-]+))?)?$/;
+
+/** Adds the view parameters that the target endpoint accepts. A URL that already has a query is a page link built from the request. */
+function withView(url: string, context: ViewContext): string {
+  const match = API_PATH.exec(url);
+  if (!match) return url;
+  const [, collection, subresource] = match as unknown as [string, string, string | undefined];
+  const params = new URLSearchParams();
+  if (isCollection(collection)) {
+    const definition = RESOURCES[collection];
+    const spoilerSafe = subresource
+      ? definition.subresources[subresource]?.spoilerSafe
+      : definition.supportsSpoilerFilter;
+    if (context.untilChapter !== undefined && spoilerSafe) params.set("until_chapter", context.untilChapter);
+    if (context.lang) params.set("lang", context.lang);
+  } else if (collection === "labels" && context.lang) {
+    params.set("lang", context.lang);
+  }
+  const query = params.toString();
+  return query ? `${url}?${query}` : url;
+}
+
+function withOrigin(value: unknown, origin: string, context: ViewContext): unknown {
+  if (typeof value === "string") return value.startsWith("/api/") ? `${origin}${withView(value, context)}` : value;
+  if (Array.isArray(value)) return value.map((item) => withOrigin(item, origin, context));
   if (value && typeof value === "object") {
     return Object.fromEntries(
-      Object.entries(value).map(([key, item]) => [key, withOrigin(item, origin)]),
+      Object.entries(value).map(([key, item]) => [key, withOrigin(item, origin, context)]),
     );
   }
   return value;
@@ -63,7 +101,7 @@ async function etagOf(body: string): Promise<string> {
 
 async function sendJson(c: Context, value: unknown): Promise<Response> {
   const origin = new URL(c.req.url).origin;
-  const body = JSON.stringify(withOrigin(value, origin));
+  const body = JSON.stringify(withOrigin(value, origin, viewContext(c.req.url)));
   const etag = await etagOf(body);
   c.header("ETag", etag);
   c.header("Cache-Control", "public, max-age=3600");
@@ -423,7 +461,7 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
   if (copy.links && typeof copy.links === "object") {
     const links = Object.entries(copy.links).filter(([name]) => definition.subresources[name]?.spoilerSafe);
     if (links.length > 0) {
-      copy.links = Object.fromEntries(links.map(([name, url]) => [name, `${url}?until_chapter=${maxChapter}`]));
+      copy.links = Object.fromEntries(links);
     } else {
       delete copy.links;
     }
