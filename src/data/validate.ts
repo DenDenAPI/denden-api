@@ -263,6 +263,20 @@ function checkCharacters(
       ].map((item) => item.revealed_chapter),
     ].filter((chapter) => chapter !== undefined);
     const debut = character.first_appearance?.chapter;
+    const covers = (character.aliases ?? []).filter((alias) => alias.cover_until !== undefined);
+    if (covers.length > 1) issues.push(`${label}: only one alias can be a cover name`);
+    for (const cover of covers) {
+      const until = cover.cover_until as number;
+      if (cover.revealed_chapter === undefined) {
+        issues.push(`${label}: cover alias "${cover.en}" needs a revealed chapter`);
+      } else if (until < cover.revealed_chapter) {
+        issues.push(`${label}: cover alias "${cover.en}" ends before it is revealed`);
+      }
+      if (!chapters.has(until)) issues.push(`${label}: unknown cover chapter ${until}`);
+      if (debut === undefined || until < debut) {
+        issues.push(`${label}: cover alias "${cover.en}" ends before the first appearance`);
+      }
+    }
     for (const chapter of revealed) {
       if (!chapters.has(chapter)) issues.push(`${label}: unknown revealed chapter ${chapter}`);
       if (debut === undefined || chapter < debut) {

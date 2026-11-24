@@ -65,7 +65,10 @@ const dataset: Dataset = {
       name: { en: "Test Pirates" },
       canon: "manga",
       first_appearance: { chapter: 1 },
-      captains: [{ character: "hero", status: "current" }],
+      captains: [
+        { character: "hero", status: "current" },
+        { character: "zed", status: "current", revealed_chapter: 9 },
+      ],
     },
   ],
   organizations: [],
@@ -123,6 +126,16 @@ const dataset: Dataset = {
       status: "deceased",
       first_appearance: { chapter: 7 },
       bounties: [{ amount: 500, status: "current", revealed_chapter: 7 }],
+    },
+    {
+      // Known only as "Mask" until chapter 9; the real name is revealed in chapter 10.
+      slug: "zed",
+      name: { en: "Zed", ja: "ゼッド" },
+      canon: "manga",
+      status: "alive",
+      status_revealed_chapter: 9,
+      first_appearance: { chapter: 9 },
+      aliases: [{ en: "Mask", ja: "マスク", revealed_chapter: 9, cover_until: 9 }],
     },
   ],
 };
@@ -368,7 +381,7 @@ describe("REST API", () => {
   it("publishes an OpenAPI document covering every resource", async () => {
     const spec = await json("/api/v1/openapi.json");
     expect(spec.openapi).toBe("3.1.0");
-    expect(spec.info["x-dataset"].counts.characters).toBe(3);
+    expect(spec.info["x-dataset"].counts.characters).toBe(4);
     for (const collection of COLLECTIONS) {
       expect(spec.paths[`/api/v1/${collection}`]).toBeDefined();
       expect(spec.paths[`/api/v1/${collection}/{id}`]).toBeDefined();
@@ -505,6 +518,36 @@ describe("spoiler filter", () => {
   it("hides a revealed identity until its chapter", async () => {
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=4")).revealed_identity).toBeUndefined();
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=5")).revealed_identity.type).toEqual({ id: "zoan", label: "Zoan" });
+  });
+
+  it("shows a cover name instead of the real name until it is revealed", async () => {
+    const covered = await json("/api/v1/characters/zed?until_chapter=9");
+    expect(covered.name).toEqual({ en: "Mask", ja: "マスク", label: "Mask" });
+    expect(covered.aliases).toBeUndefined();
+    expect(covered.spoiler_filter.redacted).toContain("name");
+
+    const revealed = await json("/api/v1/characters/zed?until_chapter=10");
+    expect(revealed.name).toEqual({ en: "Zed", ja: "ゼッド", label: "Zed" });
+    expect(revealed.aliases).toEqual([{ en: "Mask", ja: "マスク", label: "Mask", revealed_chapter: 9 }]);
+
+    const full = await json("/api/v1/characters/zed");
+    expect(full.name.en).toBe("Zed");
+    expect(full.aliases[0].cover_until).toBe(9);
+  });
+
+  it("uses the cover name in lists, sorting, references and search", async () => {
+    const names = async (path: string) => (await json(path)).results.map((item: { name: string }) => item.name);
+    expect(await names("/api/v1/characters?until_chapter=9")).toEqual(["Hero", "Mask", "Mate", "Villain"]);
+    expect(await names("/api/v1/characters?until_chapter=10")).toEqual(["Hero", "Mate", "Villain", "Zed"]);
+
+    const crew = await json("/api/v1/crews/test-pirates?until_chapter=9");
+    expect(crew.captains.map((item: { name: string }) => item.name)).toContain("Mask");
+    const later = await json("/api/v1/crews/test-pirates?until_chapter=10");
+    expect(later.captains.map((item: { name: string }) => item.name)).toContain("Zed");
+
+    expect((await json("/api/v1/search?q=zed&until_chapter=9")).count).toBe(0);
+    expect(await names("/api/v1/search?q=mask&until_chapter=9")).toEqual(["Mask"]);
+    expect(await names("/api/v1/search?q=zed")).toEqual(["Zed"]);
   });
 
   it("does not leak spoilers through search", async () => {

@@ -180,6 +180,25 @@ describe("validateDataset", () => {
     expect(issues).toContain("characters/first-character: unknown bounty chapter 99");
   });
 
+  it("rejects a cover alias without a chapter or that ends before it starts", () => {
+    const root = dataset();
+    write(root, "characters", "first-character", {
+      slug: "first-character",
+      name: { en: "First Character" },
+      canon: "manga",
+      status: "alive",
+      first_appearance: { chapter: 1 },
+      aliases: [
+        { en: "Mask", cover_until: 1 },
+        { en: "Hood", revealed_chapter: 2, cover_until: 1 },
+      ],
+    });
+    const { issues } = validateDataset(root);
+    expect(issues).toContain("characters/first-character: only one alias can be a cover name");
+    expect(issues).toContain('characters/first-character: cover alias "Mask" needs a revealed chapter');
+    expect(issues).toContain('characters/first-character: cover alias "Hood" ends before it is revealed');
+  });
+
   it("rejects a cycle between parent locations", () => {
     const root = dataset();
     for (const [slug, parent] of [["island-a", "island-b"], ["island-b", "island-a"]] as const) {
