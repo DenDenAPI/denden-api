@@ -1,4 +1,4 @@
-import { createWriteStream, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { once } from "node:events";
@@ -7,6 +7,7 @@ import { buildOutput } from "../build/model.js";
 import { insertStatements, SCHEMA } from "../build/sql.js";
 import { validateDataset } from "../data/validate.js";
 import { AttributionSchema } from "../schemas/attribution.js";
+import { GlossarySchema } from "../schemas/glossary.js";
 
 const dataRoot = resolve(process.argv[2] ?? "../denden-data");
 const outDir = resolve(process.argv[3] ?? "dist");
@@ -19,6 +20,11 @@ if (issues.length > 0) {
 
 const attribution = AttributionSchema.parse(parse(readFileSync(join(dataRoot, "ATTRIBUTION.yaml"), "utf8")));
 const output = buildOutput(dataset, attribution);
+
+const glossaryPath = join(dataRoot, "i18n", "es", "glossary.yaml");
+if (existsSync(glossaryPath)) {
+  output.documents.set("v1/i18n/es", GlossarySchema.parse(parse(readFileSync(glossaryPath, "utf8"))));
+}
 
 rmSync(outDir, { recursive: true, force: true });
 for (const [path, document] of output.documents) {

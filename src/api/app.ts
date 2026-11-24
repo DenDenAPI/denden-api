@@ -1,5 +1,7 @@
 import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
+import type { Glossary } from "../schemas/glossary.js";
+import { canonicalRegion, labelCatalog, localizeBody, localizeReferences } from "./i18n.js";
 import type { Ports, QueryResult } from "./ports.js";
 import {
   isCollection,
@@ -129,6 +131,18 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     return value;
   };
 
+  let glossary: Promise<Glossary | null> | undefined;
+
+  /** Returns the Spanish glossary when requested, or undefined for the default English response. */
+  const requestedGlossary = async (c: Context, params: URLSearchParams): Promise<Glossary | null | undefined> => {
+    const lang = params.get("lang");
+    if (lang === null || lang === "en") return undefined;
+    if (lang !== "es") throw badRequest('"lang" must be "en" or "es".');
+    c.header("Content-Language", "es");
+    glossary ??= assets.get("v1/i18n/es") as Promise<Glossary | null>;
+    return glossary;
+  };
+
   const enforceRateLimit = async (c: Context): Promise<void> => {
     const key = c.req.header("cf-connecting-ip") ?? "local";
     if (!(await rateLimiter.allow(key))) {
@@ -168,6 +182,11 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     return sendJson(c, await assets.get("v1/openapi"));
   });
 
+  app.get("/api/v1/labels", async (c) => {
+    const params = singleParams(c, new Set(["lang"]));
+    return sendJson(c, labelCatalog(await requestedGlossary(c, params)));
+  });
+
   app.get("/api/v1/attribution", async (c) => {
     singleParams(c, new Set());
     return sendJson(c, await assets.get("v1/attribution"));
@@ -185,7 +204,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
   });
 
   app.get("/api/v1/search", async (c) => {
-    const params = singleParams(c, new Set(["q", "type", "page", "limit", "until_chapter"]));
+    const params = singleParams(c, new Set(["q", "type", "page", "limit", "until_chapter", "lang"]));
+    const translations = await requestedGlossary(c, params);
     const terms = (params.get("q") ?? "").trim().split(/\s+/u).filter(Boolean).slice(0, 8);
     if (terms.length === 0) throw badRequest('"q" is required.');
     if (terms.some((term) => term.length > 64)) throw badRequest('"q" terms must not exceed 64 characters.');
@@ -209,7 +229,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       name: row.name,
       url: `/api/v1/${row.collection}/${row.id}`,
     }));
-    return sendJson(c, paginated(c, result.count, page, limit, results));
+    const localized = translations === undefined ? results : (localizeReferences(results, translations) as unknown[]);
+    return sendJson(c, paginated(c, result.count, page, limit, localized));
   });
 
   app.get("/api/v1/:collection", async (c) => {
@@ -217,7 +238,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     if (!isCollection(collection)) throw notFound();
     const definition = RESOURCES[collection];
     const filterNames = Object.keys(definition.filters);
-    const params = singleParams(c, new Set(["page", "limit", "sort", "until_chapter", ...filterNames]));
+    const params = singleParams(c, new Set(["page", "limit", "sort", "until_chapter", "lang", ...filterNames]));
+    const translations = await requestedGlossary(c, params);
     const { page, limit, offset } = pagination(params);
     const maxChapter = await spoilerLimit(params);
     requireSpoilerSupport(definition, collection, maxChapter);
@@ -230,7 +252,7 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       if (maxChapter !== undefined && !definition.filters[name]?.spoilerSafe) {
         throw badRequest(`Filter "${name}" cannot be combined with "until_chapter" because it may reveal spoilers.`);
       }
-      filters.push({ facet: name, value });
+      filters.push({ facet: name, value: name === "region" ? canonicalRegion(translations, value) : value });
     }
 
     const rawSort = params.get("sort");
@@ -253,7 +275,9 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       offset,
       ...(maxChapter !== undefined ? { maxChapter } : {}),
     });
-    return sendJson(c, paginated(c, result.count, page, limit, resultRows(result)));
+    const rows = resultRows(result);
+    const localized = translations === undefined ? rows : (localizeReferences(rows, translations) as unknown[]);
+    return sendJson(c, paginated(c, result.count, page, limit, localized));
   });
 
   const resourcePath = (collection: CollectionName, rawId: string): string => {
@@ -266,15 +290,18 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     const collection = c.req.param("collection");
     if (!isCollection(collection)) throw notFound();
     const definition = RESOURCES[collection];
-    const params = singleParams(c, new Set(["until_chapter"]));
+    const params = singleParams(c, new Set(["until_chapter", "lang"]));
+    const translations = await requestedGlossary(c, params);
     const maxChapter = await spoilerLimit(params);
     requireSpoilerSupport(definition, collection, maxChapter);
 
     const document = (await assets.get(resourcePath(collection, c.req.param("id")))) as DetailDocument | null;
     if (!document) throw notFound();
-    if (maxChapter === undefined) return sendJson(c, document.body);
-    if (document.first_chapter === null || document.first_chapter > maxChapter) throw notFound();
-    return sendJson(c, redact(definition, document.body, maxChapter));
+    if (maxChapter !== undefined && (document.first_chapter === null || document.first_chapter > maxChapter)) {
+      throw notFound();
+    }
+    const body = maxChapter === undefined ? document.body : redact(definition, document.body, maxChapter);
+    return sendJson(c, localizeBody(collection, body, translations));
   });
 
   app.get("/api/v1/:collection/:id/:subresource", async (c) => {
@@ -285,7 +312,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     const rule = definition.subresources[name];
     if (!rule) throw notFound();
 
-    const params = singleParams(c, new Set(["page", "limit", "until_chapter"]));
+    const params = singleParams(c, new Set(["page", "limit", "until_chapter", "lang"]));
+    const translations = await requestedGlossary(c, params);
     const { page, limit, offset } = pagination(params);
     const maxChapter = await spoilerLimit(params);
     if (maxChapter !== undefined && !rule.spoilerSafe) {
@@ -305,7 +333,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
         maxChapter === undefined || (first_chapter !== null && first_chapter <= maxChapter),
     );
     const results = visible.slice(offset, offset + limit).map(({ item }) => item);
-    return sendJson(c, paginated(c, visible.length, page, limit, results));
+    const localized = translations === undefined ? results : (localizeReferences(results, translations) as unknown[]);
+    return sendJson(c, paginated(c, visible.length, page, limit, localized));
   });
 
   app.notFound((c) => problem(c, notFound()));

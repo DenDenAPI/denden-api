@@ -380,6 +380,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution): BuildOu
     data: { last_chapter: lastChapter, last_episode: lastEpisode },
     resources: Object.fromEntries(COLLECTIONS.map((name) => [name, `/api/v1/${name}`])),
     search: "/api/v1/search",
+    labels: "/api/v1/labels",
     attribution: "/api/v1/attribution",
     openapi: "/api/v1/openapi.json",
   });

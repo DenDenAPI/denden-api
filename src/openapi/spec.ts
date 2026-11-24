@@ -86,6 +86,18 @@ const RESPONSE_OVERRIDES: Record<CollectionName, JsonSchema> = {
   },
 };
 
+/** `label` is the display text in the requested language, with the same key in every language. */
+function addLocalizedFields(collection: CollectionName, properties: JsonSchema): void {
+  const label = { type: "string", description: "Text to display in the requested language." };
+  properties.translation = component("Translation");
+  properties.name.properties.label = label;
+  if (properties.revealed_identity) properties.revealed_identity.properties.name.properties.label = label;
+  if (collection === "characters") {
+    properties.epithets.items.properties.label = label;
+    properties.aliases.items.properties.label = label;
+  }
+}
+
 function responseSchema(collection: CollectionName): JsonSchema {
   const schema = z.toJSONSchema(SOURCE_SCHEMAS[collection], { target: "draft-2020-12" }) as JsonSchema;
   delete schema.$schema;
@@ -96,6 +108,7 @@ function responseSchema(collection: CollectionName): JsonSchema {
     links: { type: "object", additionalProperties: { type: "string", format: "uri" } },
     spoiler_filter: component("SpoilerFilter"),
   };
+  addLocalizedFields(collection, schema.properties);
   const redacted = new Set<string>(RESOURCES[collection].redact);
   schema.required = ["url", ...(schema.required as string[]).filter((name) => !redacted.has(name))];
 
@@ -140,6 +153,11 @@ const UNTIL = parameter(
   "until_chapter",
   { type: "integer", minimum: 0 },
   "Hide anything that cannot be confirmed as known at this manga chapter.",
+);
+const LANG = parameter(
+  "lang",
+  { type: "string", enum: ["en", "es"], default: "en" },
+  "Language of display text. Keys never change, technical codes stay in English, and values without a translation fall back to English.",
 );
 
 const errors = (...statuses: number[]): JsonSchema =>
@@ -197,6 +215,15 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
       additionalProperties: false,
       properties: { name: { type: "string" }, url: { type: "string", format: "uri" } },
     },
+    Translation: {
+      type: "object",
+      required: ["language", "reviewed"],
+      additionalProperties: false,
+      properties: {
+        language: { type: "string", enum: ["es"] },
+        reviewed: { type: "boolean" },
+      },
+    },
     RelationReference: {
       type: "object",
       required: ["name", "url"],
@@ -233,6 +260,22 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
       properties: {
         until_chapter: { type: "integer", minimum: 0 },
         redacted: { type: "array", items: { type: "string" } },
+      },
+    },
+    Label: {
+      type: "object",
+      required: ["default", "female"],
+      additionalProperties: false,
+      properties: { default: { type: "string" }, female: { type: "string" } },
+    },
+    Labels: {
+      type: "object",
+      required: ["language", "species", "periods"],
+      additionalProperties: false,
+      properties: {
+        language: { type: "string", enum: ["en", "es"] },
+        species: { type: "object", additionalProperties: component("Label") },
+        periods: { type: "object", additionalProperties: component("Label") },
       },
     },
     SearchResult: {
@@ -288,6 +331,15 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
         responses: success({ type: "object" }),
       },
     },
+    "/api/v1/labels": {
+      get: {
+        operationId: "getLabels",
+        tags: ["general"],
+        summary: "Display text for species and period codes",
+        parameters: [LANG],
+        responses: { ...success(component("Labels")), ...errors(400) },
+      },
+    },
     "/api/v1/search": {
       get: {
         operationId: "search",
@@ -299,6 +351,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
           PAGE,
           LIMIT,
           UNTIL,
+          LANG,
         ],
         responses: { ...success(pagedSchema(component("SearchResult"))), ...errors(400, 429) },
       },
@@ -343,6 +396,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
           LIMIT,
           parameter("sort", { type: "string", enum: sortValues }, "Sort field. Prefix with - for descending."),
           ...spoiler,
+          LANG,
           ...Object.keys(definition.filters).map((name) =>
             parameter(name, filterSchema(collection, name, properties), `Filter by ${name}.`),
           ),
@@ -355,7 +409,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
         operationId: `get:${collection}`,
         tags: [collection],
         summary: `Get one of ${collection}`,
-        parameters: [idParameter(collection), ...spoiler],
+        parameters: [idParameter(collection), ...spoiler, LANG],
         responses: { ...success(component(schemaName)), ...errors(400, 404) },
       },
     };
@@ -365,7 +419,7 @@ export function createOpenApiDocument(summary: DatasetSummary): JsonSchema {
           operationId: `list:${collection}:${name}`,
           tags: [collection],
           summary: `List ${name}`,
-          parameters: [idParameter(collection), PAGE, LIMIT, ...(rule.spoilerSafe ? [UNTIL] : [])],
+          parameters: [idParameter(collection), PAGE, LIMIT, ...(rule.spoilerSafe ? [UNTIL] : []), LANG],
           responses: { ...success(pagedSchema(subresourceSchema(name))), ...errors(400, 404) },
         },
       };
