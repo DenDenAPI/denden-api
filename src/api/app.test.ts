@@ -130,14 +130,17 @@ const dataset: Dataset = {
       bounties: [{ amount: 500, status: "current", revealed_chapter: 7 }],
     },
     {
-      // Known only as "Mask" until chapter 9; the real name is revealed in chapter 10.
+      // Seen unnamed as "Shadow" in chapter 8, called "Mask" in chapter 9; the real name is revealed in chapter 10.
       slug: "zed",
       name: { en: "Zed", ja: "ゼッド" },
       canon: "manga",
       status: "alive",
       status_revealed_chapter: 9,
-      first_appearance: { chapter: 9 },
-      aliases: [{ en: "Mask", ja: "マスク", revealed_chapter: 9, cover_until: 9 }],
+      first_appearance: { chapter: 8 },
+      aliases: [
+        { en: "Mask", ja: "マスク", revealed_chapter: 9, cover_until: 9 },
+        { en: "Shadow", revealed_chapter: 8, cover_until: 8 },
+      ],
     },
   ],
 };
@@ -160,7 +163,7 @@ beforeAll(() => {
   const glossary: Glossary = {
     occupations: { Cook: ["Cocinero", "Cocinera"] },
     epithets: {},
-    aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío" },
+    aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío", Shadow: "Sombra" },
     fruit_meanings: {},
     arcs: { "First Arc": "Primer arco", "Late Arc": "Árbol tardío" },
     sagas: { "First Saga": "Primera saga" },
@@ -534,15 +537,22 @@ describe("spoiler filter", () => {
     expect((await json("/api/v1/devil-fruits/test-fruit?until_chapter=5")).revealed_identity.type).toEqual({ id: "zoan", label: "Zoan" });
   });
 
-  it("shows a cover name instead of the real name until it is revealed", async () => {
+  it("shows each cover name in turn instead of the real name until it is revealed", async () => {
+    const first = await json("/api/v1/characters/zed?until_chapter=8");
+    expect(first.name).toEqual({ en: "Shadow", label: "Shadow" });
+    expect(first.aliases).toBeUndefined();
+
     const covered = await json("/api/v1/characters/zed?until_chapter=9");
     expect(covered.name).toEqual({ en: "Mask", ja: "マスク", label: "Mask" });
-    expect(covered.aliases).toBeUndefined();
+    expect(covered.aliases).toEqual([{ en: "Shadow", label: "Shadow", revealed_chapter: 8 }]);
     expect(covered.spoiler_filter.redacted).toContain("name");
 
     const revealed = await json("/api/v1/characters/zed?until_chapter=10");
     expect(revealed.name).toEqual({ en: "Zed", ja: "ゼッド", label: "Zed" });
-    expect(revealed.aliases).toEqual([{ en: "Mask", ja: "マスク", label: "Mask", revealed_chapter: 9 }]);
+    expect(revealed.aliases).toEqual([
+      { en: "Mask", ja: "マスク", label: "Mask", revealed_chapter: 9 },
+      { en: "Shadow", label: "Shadow", revealed_chapter: 8 },
+    ]);
 
     const full = await json("/api/v1/characters/zed");
     expect(full.name.en).toBe("Zed");
@@ -551,6 +561,7 @@ describe("spoiler filter", () => {
 
   it("uses the cover name in lists, sorting, references and search", async () => {
     const names = async (path: string) => (await json(path)).results.map((item: { name: string }) => item.name);
+    expect(await names("/api/v1/characters?until_chapter=8")).toEqual(["Hero", "Mate", "Shadow", "Villain"]);
     expect(await names("/api/v1/characters?until_chapter=9")).toEqual(["Hero", "Mask", "Mate", "Villain"]);
     expect(await names("/api/v1/characters?until_chapter=10")).toEqual(["Hero", "Mate", "Villain", "Zed"]);
 
@@ -561,6 +572,19 @@ describe("spoiler filter", () => {
 
     expect((await json("/api/v1/search?q=zed&until_chapter=9")).count).toBe(0);
     expect(await names("/api/v1/search?q=mask&until_chapter=9")).toEqual(["Mask"]);
+    expect(await names("/api/v1/search?q=shadow&until_chapter=8")).toEqual(["Shadow"]);
+    expect((await json("/api/v1/search?q=mask&until_chapter=8")).count).toBe(0);
+    expect((await json("/api/v1/search?q=shadow&until_chapter=9")).count).toBe(0);
+    expect(await names("/api/v1/search?q=zed&until_chapter=10")).toEqual(["Zed"]);
+    expect(await names("/api/v1/search?q=shadow")).toEqual(["Zed"]);
+  });
+
+  it("translates a descriptive cover name", async () => {
+    const names = async (path: string) => (await json(path)).results.map((item: { name: string }) => item.name);
+    const covered = await json("/api/v1/characters/zed?until_chapter=8&lang=es");
+    expect(covered.name).toEqual({ en: "Shadow", label: "Sombra" });
+    expect(await names("/api/v1/characters?until_chapter=8&lang=es")).toContain("Sombra");
+    expect(await names("/api/v1/search?q=sombra&until_chapter=8&lang=es")).toEqual(["Sombra"]);
     expect(await names("/api/v1/search?q=zed")).toEqual(["Zed"]);
   });
 

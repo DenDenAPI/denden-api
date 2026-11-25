@@ -180,7 +180,7 @@ describe("validateDataset", () => {
     expect(issues).toContain("characters/first-character: unknown bounty chapter 99");
   });
 
-  it("rejects a cover alias without a chapter or that ends before it starts", () => {
+  it("rejects a cover alias without a chapter, that ends before it starts or that overlaps another", () => {
     const root = dataset();
     write(root, "characters", "first-character", {
       slug: "first-character",
@@ -191,10 +191,11 @@ describe("validateDataset", () => {
       aliases: [
         { en: "Mask", cover_until: 1 },
         { en: "Hood", revealed_chapter: 2, cover_until: 1 },
+        { en: "Veil", revealed_chapter: 1, cover_until: 2 },
       ],
     });
     const { issues } = validateDataset(root);
-    expect(issues).toContain("characters/first-character: only one alias can be a cover name");
+    expect(issues).toContain('characters/first-character: cover alias "Veil" starts before "Hood" ends');
     expect(issues).toContain('characters/first-character: cover alias "Mask" needs a revealed chapter');
     expect(issues).toContain('characters/first-character: cover alias "Hood" ends before it is revealed');
   });
