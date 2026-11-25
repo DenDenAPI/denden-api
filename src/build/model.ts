@@ -1,5 +1,5 @@
 import { nameSection, translatedForms } from "../api/i18n.js";
-import type { Covers } from "../api/ports.js";
+import type { Cover, Covers } from "../api/ports.js";
 import { COLLECTIONS, type CollectionName } from "../api/resources.js";
 import type { Dataset } from "../data/validate.js";
 import { createOpenApiDocument } from "../openapi/spec.js";
@@ -21,18 +21,23 @@ export interface RecordRow {
   number: number | null;
   first_chapter: number | null;
   bounty: number | null;
-  /** Name shown by spoiler-filtered responses up to `cover_until` (see the character alias schema). */
-  cover_name: string | null;
-  cover_sort_name: string | null;
-  cover_sort_name_es: string | null;
-  cover_until: number | null;
 }
 
-function coverOf(record: Loose): Covers[string] | undefined {
-  const alias = ((record.aliases ?? []) as Loose[]).find((item) => item.cover_until !== undefined);
-  if (!alias) return undefined;
-  const { revealed_chapter: _revealed, cover_until: until, ...name } = alias;
-  return { name: name as Covers[string]["name"], until };
+/** A name shown by spoiler-filtered responses up to `until` (see the character alias schema). */
+export interface CoverRow {
+  collection: CollectionName;
+  id: string;
+  until: number;
+  name: string;
+  sort_name: string;
+  sort_name_es: string;
+}
+
+function coversOf(record: Loose): Cover[] {
+  return ((record.aliases ?? []) as Loose[])
+    .filter((item) => item.cover_until !== undefined)
+    .map(({ revealed_chapter: _revealed, cover_until: until, ...name }) => ({ name: name as Cover["name"], until }))
+    .sort((a, b) => a.until - b.until);
 }
 
 export interface FacetRow {
@@ -52,6 +57,7 @@ export interface SearchRow {
 export interface BuildOutput {
   documents: Map<string, unknown>;
   records: RecordRow[];
+  covers: CoverRow[];
   facets: FacetRow[];
   search: SearchRow[];
 }
@@ -237,6 +243,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
   const records: RecordRow[] = [];
   const search: SearchRow[] = [];
   const covers: Covers = {};
+  const coverRows: CoverRow[] = [];
 
   const linksFor = (collection: CollectionName, record: Loose, names: string[]) => {
     const url = urlOf(collection, record.slug);
@@ -360,8 +367,18 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
       const bounties: Loose[] = record.bounties ?? [];
       // Deceased characters keep their last bounty, which the source marks as former.
       const latestBounty = bounties.filter((item) => !item.canon).at(-1);
-      const cover = collection === "characters" ? coverOf(record) : undefined;
-      if (cover) covers[id] = cover;
+      const characterCovers = collection === "characters" ? coversOf(record) : [];
+      if (characterCovers.length > 0) covers[id] = characterCovers;
+      for (const { name: coverName, until } of characterCovers) {
+        coverRows.push({
+          collection,
+          id,
+          until,
+          name: coverName.en,
+          sort_name: coverName.en.toLocaleLowerCase("en"),
+          sort_name_es: spanishSortKey(coverName.en),
+        });
+      }
       records.push({
         collection,
         id,
@@ -372,10 +389,6 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
         number: record.number ?? record.order ?? null,
         first_chapter: first,
         bounty: latestBounty?.amount ?? null,
-        cover_name: cover?.name.en ?? null,
-        cover_sort_name: cover ? cover.name.en.toLocaleLowerCase("en") : null,
-        cover_sort_name_es: cover ? spanishSortKey(cover.name.en) : null,
-        cover_until: cover?.until ?? null,
       });
 
       const section = nameSection(collection);
@@ -391,8 +404,9 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
       ];
       const names = [nameText(record.name), ...spanish(record.name)];
       // A covered character's real name is a spoiler, so spoiler-safe search only sees the cover name.
-      const searchName = cover ? [nameText(cover.name)] : names;
-      const searchExtra = cover ? [...names, ...extras] : extras;
+      const covered = characterCovers.length > 0;
+      const searchName = covered ? characterCovers.map((cover) => nameText(cover.name)) : names;
+      const searchExtra = covered ? [...names, ...extras] : extras;
       search.push({ collection, id, name: searchName.join(" "), extra: searchExtra.filter(Boolean).join(" ") });
 
       for (const field of ["canon", "kind", "status", "gender", "blood_type", "type", "sub_type", "region"]) {
@@ -461,7 +475,7 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
     documents.set(`v1/attribution/${collection}`, { items });
   }
 
-  return { documents, records, facets, search };
+  return { documents, records, covers: coverRows, facets, search };
 }
 
 function lookupExists(

@@ -18,12 +18,14 @@ function matchExpression(terms: string[], spoilerSafe: boolean): string {
 }
 
 /**
- * With a spoiler limit, a character still known by a cover name (Kyoshiro) is listed, named and sorted by it.
- * Each expression takes the limit as its only parameter.
+ * With a spoiler limit, a character still known by a cover name (Kyoshiro) is listed, named and sorted by the
+ * earliest cover that has not ended. Each expression takes the limit as its only parameter.
  */
 function coveredColumn(column: string, cover: string, maxChapter: number | undefined): { sql: string; params: SqlValue[] } {
   if (maxChapter === undefined) return { sql: column, params: [] };
-  return { sql: `CASE WHEN r.cover_until >= ? THEN ${cover} ELSE ${column} END`, params: [maxChapter] };
+  const current = `SELECT c.${cover} FROM covers c WHERE c.collection = r.collection AND c.id = r.id AND c.until >= ?
+    ORDER BY c.until LIMIT 1`;
+  return { sql: `COALESCE((${current}), ${column})`, params: [maxChapter] };
 }
 
 export class SqlQueryStore implements QueryStore {
@@ -54,10 +56,10 @@ export class SqlQueryStore implements QueryStore {
 
     const where = conditions.join(" AND ");
     const spanish = query.language === "es";
-    const name = coveredColumn("r.name", "r.cover_name", query.maxChapter);
+    const name = coveredColumn("r.name", "name", query.maxChapter);
     const sortName = coveredColumn(
       spanish ? "r.sort_name_es" : "r.sort_name",
-      spanish ? "r.cover_sort_name_es" : "r.cover_sort_name",
+      spanish ? "sort_name_es" : "sort_name",
       query.maxChapter,
     );
     const byName = query.sort.column === "sort_name";
@@ -96,8 +98,8 @@ export class SqlQueryStore implements QueryStore {
 
     const from = "FROM search_index JOIN records r ON r.collection = search_index.collection AND r.id = search_index.id";
     const where = conditions.join(" AND ");
-    const name = coveredColumn("r.name", "r.cover_name", query.maxChapter);
-    const sortName = coveredColumn("r.sort_name", "r.cover_sort_name", query.maxChapter);
+    const name = coveredColumn("r.name", "name", query.maxChapter);
+    const sortName = coveredColumn("r.sort_name", "sort_name", query.maxChapter);
     const [total] = await this.run<{ count: number }>(`SELECT COUNT(*) AS count ${from} WHERE ${where}`, params);
     const rows = await this.run<ResultRow>(
       `SELECT r.collection, r.id, ${name.sql} AS name ${from} WHERE ${where}

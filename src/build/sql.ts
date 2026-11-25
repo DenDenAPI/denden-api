@@ -2,6 +2,7 @@ import type { BuildOutput } from "./model.js";
 
 export const SCHEMA = `
 DROP TABLE IF EXISTS records;
+DROP TABLE IF EXISTS covers;
 DROP TABLE IF EXISTS facets;
 DROP TABLE IF EXISTS search_index;
 DROP TABLE IF EXISTS collection_counts;
@@ -19,12 +20,17 @@ CREATE TABLE records (
   number INTEGER,
   first_chapter INTEGER,
   bounty INTEGER,
-  cover_name TEXT,
-  cover_sort_name TEXT,
-  cover_sort_name_es TEXT,
-  cover_until INTEGER,
   PRIMARY KEY (collection, id)
 );
+CREATE TABLE covers (
+  collection TEXT NOT NULL,
+  id TEXT NOT NULL,
+  until INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  sort_name TEXT NOT NULL,
+  sort_name_es TEXT NOT NULL,
+  PRIMARY KEY (collection, id, until)
+) WITHOUT ROWID;
 CREATE INDEX records_name ON records (collection, sort_name, id);
 CREATE INDEX records_name_es ON records (collection, sort_name_es, id);
 CREATE INDEX records_number ON records (collection, number, sort_name, id);
@@ -63,12 +69,12 @@ export function* insertStatements(output: BuildOutput): Generator<string> {
       row.number,
       row.first_chapter,
       row.bounty,
-      row.cover_name,
-      row.cover_sort_name,
-      row.cover_sort_name_es,
-      row.cover_until,
     ].map(literal);
     yield `INSERT INTO records VALUES (${values.join(",")});`;
+  }
+  for (const row of output.covers) {
+    const values = [row.collection, row.id, row.until, row.name, row.sort_name, row.sort_name_es].map(literal);
+    yield `INSERT INTO covers VALUES (${values.join(",")});`;
   }
   const seen = new Set<string>();
   for (const row of output.facets) {

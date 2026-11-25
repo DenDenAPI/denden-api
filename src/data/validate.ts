@@ -273,8 +273,16 @@ function checkCharacters(
       ].map((item) => item.revealed_chapter),
     ].filter((chapter) => chapter !== undefined);
     const debut = character.first_appearance?.chapter;
-    const covers = (character.aliases ?? []).filter((alias) => alias.cover_until !== undefined);
-    if (covers.length > 1) issues.push(`${label}: only one alias can be a cover name`);
+    const covers = (character.aliases ?? [])
+      .filter((alias) => alias.cover_until !== undefined)
+      .sort((a, b) => (a.cover_until as number) - (b.cover_until as number));
+    // Cover names follow one another: each starts after the previous one ends.
+    covers.forEach((cover, index) => {
+      const previous = covers[index - 1];
+      if (previous && cover.revealed_chapter !== undefined && cover.revealed_chapter <= (previous.cover_until as number)) {
+        issues.push(`${label}: cover alias "${cover.en}" starts before "${previous.en}" ends`);
+      }
+    });
     for (const cover of covers) {
       const until = cover.cover_until as number;
       if (cover.revealed_chapter === undefined) {

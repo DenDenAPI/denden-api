@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import type { Glossary } from "../schemas/glossary.js";
 import { canonicalRegion, labelCatalog, localizeBody, localizeItems, localizeReferences } from "./i18n.js";
-import type { Covers, Ports, QueryResult } from "./ports.js";
+import { activeCover, type Cover, type Covers, type Ports, type QueryResult } from "./ports.js";
 import {
   isCollection,
   normalizeId,
@@ -355,8 +355,8 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     if (maxChapter !== undefined) {
       body = await withCovers(body, maxChapter);
       const id = normalizeId(collection, c.req.param("id"));
-      const cover = collection === "characters" ? (await coverMap())[id] : undefined;
-      if (cover && cover.until >= maxChapter) body = coverBody(body, cover);
+      const cover = collection === "characters" ? activeCover((await coverMap())[id], maxChapter) : undefined;
+      if (cover) body = coverBody(body, cover);
     }
     return sendJson(c, localizeBody(collection, body, translations));
   });
@@ -434,13 +434,13 @@ function coverReferences(value: unknown, covers: Covers, maxChapter: number): un
     Object.entries(value).map(([key, item]) => [key, coverReferences(item, covers, maxChapter)]),
   ) as Json;
   const id = typeof copy.url === "string" ? CHARACTER_URL.exec(copy.url)?.[1] : undefined;
-  const cover = id ? covers[id] : undefined;
-  if (cover && cover.until >= maxChapter && typeof copy.name === "string") copy.name = cover.name.en;
+  const cover = id ? activeCover(covers[id], maxChapter) : undefined;
+  if (cover && typeof copy.name === "string") copy.name = cover.name.en;
   return copy;
 }
 
 /** The cover name replaces the record name and leaves the alias list. */
-function coverBody(body: Json, cover: Covers[string]): Json {
+function coverBody(body: Json, cover: Cover): Json {
   const copy: Json = { ...body, name: cover.name };
   if (Array.isArray(copy.aliases)) {
     const aliases = (copy.aliases as { en: string }[]).filter((alias) => alias.en !== cover.name.en);

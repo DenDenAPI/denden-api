@@ -29,11 +29,21 @@ export interface ResultRow {
   name: string;
 }
 
+export interface Cover {
+  name: { en: string; ja?: string; romaji?: string };
+  until: number;
+}
+
 /**
- * The `v1/covers` asset: characters the reader first knows by a false name, keyed by public id.
- * Until `until`, spoiler-filtered responses show `name` instead of the real name.
+ * The `v1/covers` asset: characters the reader first knows by false names, keyed by public id and sorted by `until`.
+ * Spoiler-filtered responses show the first cover whose `until` has not passed instead of the real name.
  */
-export type Covers = Record<string, { name: { en: string; ja?: string; romaji?: string }; until: number }>;
+export type Covers = Record<string, Cover[]>;
+
+/** The cover name in force at a chapter, if any. */
+export function activeCover(covers: Cover[] | undefined, maxChapter: number): Cover | undefined {
+  return covers?.find((cover) => cover.until >= maxChapter);
+}
 
 export interface QueryResult {
   count: number;
