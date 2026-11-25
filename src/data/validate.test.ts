@@ -192,10 +192,12 @@ describe("validateDataset", () => {
         { en: "Mask", cover_until: 1 },
         { en: "Hood", revealed_chapter: 2, cover_until: 1 },
         { en: "Veil", revealed_chapter: 1, cover_until: 2 },
+        { en: "Cloak", revealed_chapter: 1, cover_until: 1, cover_always: true },
       ],
     });
     const { issues } = validateDataset(root);
     expect(issues).toContain('characters/first-character: cover alias "Veil" starts before "Hood" ends');
+    expect(issues).toContain('characters/first-character: cover alias "Cloak" cannot both end and last forever');
     expect(issues).toContain('characters/first-character: cover alias "Mask" needs a revealed chapter');
     expect(issues).toContain('characters/first-character: cover alias "Hood" ends before it is revealed');
   });

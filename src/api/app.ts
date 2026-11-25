@@ -484,12 +484,18 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
       }
     }
     if (Array.isArray(value)) {
-      const items = value as { revealed_chapter?: number; canon?: string; status?: string; cover_until?: number }[];
+      const items = value as {
+        revealed_chapter?: number;
+        canon?: string;
+        status?: string;
+        cover_until?: number;
+        cover_always?: true;
+      }[];
       // The current/former status can reveal a later departure, so it stays hidden.
-      // `cover_until` would tell when a false name is exposed, so it stays hidden too.
+      // `cover_until` and `cover_always` would tell whether and when a false name is exposed, so they stay hidden.
       const visible = items
         .filter((item) => !item.canon && isRevealed(item.revealed_chapter))
-        .map(({ status: _status, cover_until: _cover, ...item }) => item);
+        .map(({ status: _status, cover_until: _cover, cover_always: _always, ...item }) => item);
       if (visible.length > 0) copy[field] = visible;
       else delete copy[field];
       continue;
