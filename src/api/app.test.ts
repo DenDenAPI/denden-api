@@ -163,7 +163,7 @@ beforeAll(() => {
   const glossary: Glossary = {
     occupations: { Cook: ["Cocinero", "Cocinera"] },
     epithets: {},
-    aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío" },
+    aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío", Shadow: "Sombra" },
     fruit_meanings: {},
     arcs: { "First Arc": "Primer arco", "Late Arc": "Árbol tardío" },
     sagas: { "First Saga": "Primera saga" },
@@ -572,7 +572,19 @@ describe("spoiler filter", () => {
 
     expect((await json("/api/v1/search?q=zed&until_chapter=9")).count).toBe(0);
     expect(await names("/api/v1/search?q=mask&until_chapter=9")).toEqual(["Mask"]);
-    expect(await names("/api/v1/search?q=mask&until_chapter=8")).toEqual(["Shadow"]);
+    expect(await names("/api/v1/search?q=shadow&until_chapter=8")).toEqual(["Shadow"]);
+    expect((await json("/api/v1/search?q=mask&until_chapter=8")).count).toBe(0);
+    expect((await json("/api/v1/search?q=shadow&until_chapter=9")).count).toBe(0);
+    expect(await names("/api/v1/search?q=zed&until_chapter=10")).toEqual(["Zed"]);
+    expect(await names("/api/v1/search?q=shadow")).toEqual(["Zed"]);
+  });
+
+  it("translates a descriptive cover name", async () => {
+    const names = async (path: string) => (await json(path)).results.map((item: { name: string }) => item.name);
+    const covered = await json("/api/v1/characters/zed?until_chapter=8&lang=es");
+    expect(covered.name).toEqual({ en: "Shadow", label: "Sombra" });
+    expect(await names("/api/v1/characters?until_chapter=8&lang=es")).toContain("Sombra");
+    expect(await names("/api/v1/search?q=sombra&until_chapter=8&lang=es")).toEqual(["Sombra"]);
     expect(await names("/api/v1/search?q=zed")).toEqual(["Zed"]);
   });
 

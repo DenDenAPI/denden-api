@@ -27,6 +27,7 @@ CREATE TABLE covers (
   id TEXT NOT NULL,
   until INTEGER NOT NULL,
   name TEXT NOT NULL,
+  name_es TEXT,
   sort_name TEXT NOT NULL,
   sort_name_es TEXT NOT NULL,
   PRIMARY KEY (collection, id, until)
@@ -43,7 +44,9 @@ CREATE TABLE facets (
   value TEXT NOT NULL,
   PRIMARY KEY (collection, facet, value, id)
 ) WITHOUT ROWID;
-CREATE VIRTUAL TABLE search_index USING fts5(collection UNINDEXED, id UNINDEXED, name, extra);
+CREATE VIRTUAL TABLE search_index USING fts5(
+  collection UNINDEXED, id UNINDEXED, cover UNINDEXED, from_chapter UNINDEXED, until_chapter UNINDEXED, name, extra
+);
 `;
 
 function literal(value: string | number | null): string {
@@ -73,7 +76,7 @@ export function* insertStatements(output: BuildOutput): Generator<string> {
     yield `INSERT INTO records VALUES (${values.join(",")});`;
   }
   for (const row of output.covers) {
-    const values = [row.collection, row.id, row.until, row.name, row.sort_name, row.sort_name_es].map(literal);
+    const values = [row.collection, row.id, row.until, row.name, row.name_es, row.sort_name, row.sort_name_es].map(literal);
     yield `INSERT INTO covers VALUES (${values.join(",")});`;
   }
   const seen = new Set<string>();
@@ -85,7 +88,15 @@ export function* insertStatements(output: BuildOutput): Generator<string> {
     yield `INSERT INTO facets VALUES (${values.join(",")});`;
   }
   for (const row of output.search) {
-    const values = [row.collection, row.id, row.name, row.extra].map(literal);
-    yield `INSERT INTO search_index (collection, id, name, extra) VALUES (${values.join(",")});`;
+    const values = [
+      row.collection,
+      row.id,
+      row.cover ? 1 : 0,
+      row.from_chapter,
+      row.until_chapter,
+      row.name,
+      row.extra,
+    ].map(literal);
+    yield `INSERT INTO search_index (collection, id, cover, from_chapter, until_chapter, name, extra) VALUES (${values.join(",")});`;
   }
 }

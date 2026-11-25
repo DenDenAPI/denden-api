@@ -23,10 +23,12 @@ function matchExpression(terms: string[], spoilerSafe: boolean): string {
  */
 function coveredColumn(column: string, cover: string, maxChapter: number | undefined): { sql: string; params: SqlValue[] } {
   if (maxChapter === undefined) return { sql: column, params: [] };
-  const current = `SELECT c.${cover} FROM covers c WHERE c.collection = r.collection AND c.id = r.id AND c.until >= ?
+  const current = `SELECT ${cover} FROM covers c WHERE c.collection = r.collection AND c.id = r.id AND c.until >= ?
     ORDER BY c.until LIMIT 1`;
   return { sql: `COALESCE((${current}), ${column})`, params: [maxChapter] };
 }
+
+const coverName = (spanish: boolean) => (spanish ? "COALESCE(c.name_es, c.name)" : "c.name");
 
 export class SqlQueryStore implements QueryStore {
   constructor(private readonly run: SqlRunner) {}
@@ -56,10 +58,10 @@ export class SqlQueryStore implements QueryStore {
 
     const where = conditions.join(" AND ");
     const spanish = query.language === "es";
-    const name = coveredColumn("r.name", "name", query.maxChapter);
+    const name = coveredColumn("r.name", coverName(spanish), query.maxChapter);
     const sortName = coveredColumn(
       spanish ? "r.sort_name_es" : "r.sort_name",
-      spanish ? "sort_name_es" : "sort_name",
+      spanish ? "c.sort_name_es" : "c.sort_name",
       query.maxChapter,
     );
     const byName = query.sort.column === "sort_name";
@@ -94,12 +96,18 @@ export class SqlQueryStore implements QueryStore {
     if (query.maxChapter !== undefined) {
       conditions.push("r.first_chapter IS NOT NULL AND r.first_chapter <= ?");
       params.push(query.maxChapter);
+      // Only the row whose chapter window holds the limit: the cover name in force, or the real names after it.
+      conditions.push("(search_index.from_chapter IS NULL OR search_index.from_chapter <= ?)");
+      conditions.push("(search_index.until_chapter IS NULL OR search_index.until_chapter >= ?)");
+      params.push(query.maxChapter, query.maxChapter);
+    } else {
+      conditions.push("search_index.cover = 0");
     }
 
     const from = "FROM search_index JOIN records r ON r.collection = search_index.collection AND r.id = search_index.id";
     const where = conditions.join(" AND ");
-    const name = coveredColumn("r.name", "name", query.maxChapter);
-    const sortName = coveredColumn("r.sort_name", "sort_name", query.maxChapter);
+    const name = coveredColumn("r.name", coverName(query.language === "es"), query.maxChapter);
+    const sortName = coveredColumn("r.sort_name", "c.sort_name", query.maxChapter);
     const [total] = await this.run<{ count: number }>(`SELECT COUNT(*) AS count ${from} WHERE ${where}`, params);
     const rows = await this.run<ResultRow>(
       `SELECT r.collection, r.id, ${name.sql} AS name ${from} WHERE ${where}

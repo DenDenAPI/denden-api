@@ -202,9 +202,9 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
   };
 
   /** Shows a character's cover name (Kyoshiro) instead of the real one (Denjiro) while the reader cannot know it. */
-  const withCovers = async <T>(value: T, maxChapter: number | undefined): Promise<T> => {
+  const withCovers = async <T>(value: T, maxChapter: number | undefined, spanish: boolean): Promise<T> => {
     if (maxChapter === undefined) return value;
-    return coverReferences(value, await coverMap(), maxChapter) as T;
+    return coverReferences(value, await coverMap(), maxChapter, spanish) as T;
   };
 
   const resultRows = (result: QueryResult) =>
@@ -273,6 +273,7 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       offset,
       ...(type ? { collection: type } : {}),
       ...(maxChapter !== undefined ? { maxChapter } : {}),
+      ...(translations !== undefined ? { language: "es" as const } : {}),
     });
     const results = result.rows.map((row) => ({
       type: row.collection,
@@ -352,13 +353,18 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
       throw notFound();
     }
     let body = maxChapter === undefined ? document.body : redact(definition, document.body, maxChapter);
+    let cover: Cover | undefined;
     if (maxChapter !== undefined) {
-      body = await withCovers(body, maxChapter);
+      body = await withCovers(body, maxChapter, translations !== undefined);
       const id = normalizeId(collection, c.req.param("id"));
-      const cover = collection === "characters" ? activeCover((await coverMap())[id], maxChapter) : undefined;
+      cover = collection === "characters" ? activeCover((await coverMap())[id], maxChapter) : undefined;
       if (cover) body = coverBody(body, cover);
     }
-    return sendJson(c, localizeBody(collection, body, translations));
+    const localized = localizeBody(collection, body, translations);
+    if (translations !== undefined && cover?.label_es) {
+      localized.name = { ...(localized.name as Json), label: cover.label_es };
+    }
+    return sendJson(c, localized);
   });
 
   app.get("/api/v1/:collection/:id/:subresource", async (c) => {
@@ -392,6 +398,7 @@ export function createApp({ assets, queries, rateLimiter }: Ports): Hono {
     const results = await withCovers(
       visible.slice(offset, offset + limit).map(({ item }) => item),
       maxChapter,
+      translations !== undefined,
     );
     return sendJson(c, paginated(c, visible.length, page, limit, localizeItems(results, translations)));
   });
@@ -427,15 +434,15 @@ function problem(c: Context, error: ApiError): Response {
 const CHARACTER_URL = /^\/api\/v1\/characters\/([a-z0-9-]+)$/;
 
 /** Renames every reference to a character that is still known by a cover name. */
-function coverReferences(value: unknown, covers: Covers, maxChapter: number): unknown {
-  if (Array.isArray(value)) return value.map((item) => coverReferences(item, covers, maxChapter));
+function coverReferences(value: unknown, covers: Covers, maxChapter: number, spanish: boolean): unknown {
+  if (Array.isArray(value)) return value.map((item) => coverReferences(item, covers, maxChapter, spanish));
   if (!value || typeof value !== "object") return value;
   const copy = Object.fromEntries(
-    Object.entries(value).map(([key, item]) => [key, coverReferences(item, covers, maxChapter)]),
+    Object.entries(value).map(([key, item]) => [key, coverReferences(item, covers, maxChapter, spanish)]),
   ) as Json;
   const id = typeof copy.url === "string" ? CHARACTER_URL.exec(copy.url)?.[1] : undefined;
   const cover = id ? activeCover(covers[id], maxChapter) : undefined;
-  if (cover && typeof copy.name === "string") copy.name = cover.name.en;
+  if (cover && typeof copy.name === "string") copy.name = (spanish && cover.label_es) || cover.name.en;
   return copy;
 }
 

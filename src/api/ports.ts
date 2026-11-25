@@ -21,6 +21,8 @@ export interface SearchQuery {
   limit: number;
   offset: number;
   maxChapter?: number;
+  /** Language of the cover names in the results. English by default. */
+  language?: "es";
 }
 
 export interface ResultRow {
@@ -32,6 +34,8 @@ export interface ResultRow {
 export interface Cover {
   name: { en: string; ja?: string; romaji?: string };
   until: number;
+  /** Spanish label, for a descriptive cover such as "Mysterious Figure". Proper names are not translated. */
+  label_es?: string;
 }
 
 /**

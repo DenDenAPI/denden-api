@@ -29,14 +29,18 @@ export interface CoverRow {
   id: string;
   until: number;
   name: string;
+  name_es: string | null;
   sort_name: string;
   sort_name_es: string;
 }
 
-function coversOf(record: Loose): Cover[] {
+function coversOf(record: Loose, glossary: Glossary | undefined): Cover[] {
   return ((record.aliases ?? []) as Loose[])
     .filter((item) => item.cover_until !== undefined)
-    .map(({ revealed_chapter: _revealed, cover_until: until, ...name }) => ({ name: name as Cover["name"], until }))
+    .map(({ revealed_chapter: _revealed, cover_until: until, ...name }) => {
+      const [labelEs] = translatedForms(glossary, "aliases", name.en);
+      return { name: name as Cover["name"], until, ...(labelEs ? { label_es: labelEs } : {}) };
+    })
     .sort((a, b) => a.until - b.until);
 }
 
@@ -47,9 +51,16 @@ export interface FacetRow {
   value: string;
 }
 
+/**
+ * A covered character has one row per cover name, each searchable by spoiler-safe search only while it is the name
+ * shown, and a row with the real names from the reveal on. Search without a spoiler limit only uses non-cover rows.
+ */
 export interface SearchRow {
   collection: CollectionName;
   id: string;
+  cover: boolean;
+  from_chapter: number | null;
+  until_chapter: number | null;
   name: string;
   extra: string;
 }
@@ -367,16 +378,17 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
       const bounties: Loose[] = record.bounties ?? [];
       // Deceased characters keep their last bounty, which the source marks as former.
       const latestBounty = bounties.filter((item) => !item.canon).at(-1);
-      const characterCovers = collection === "characters" ? coversOf(record) : [];
+      const characterCovers = collection === "characters" ? coversOf(record, glossary) : [];
       if (characterCovers.length > 0) covers[id] = characterCovers;
-      for (const { name: coverName, until } of characterCovers) {
+      for (const { name: coverName, until, label_es: labelEs } of characterCovers) {
         coverRows.push({
           collection,
           id,
           until,
           name: coverName.en,
+          name_es: labelEs ?? null,
           sort_name: coverName.en.toLocaleLowerCase("en"),
-          sort_name_es: spanishSortKey(coverName.en),
+          sort_name_es: spanishSortKey(labelEs ?? coverName.en),
         });
       }
       records.push({
@@ -403,11 +415,22 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
         ...spanish(record.revealed_identity?.name),
       ];
       const names = [nameText(record.name), ...spanish(record.name)];
-      // A covered character's real name is a spoiler, so spoiler-safe search only sees the cover name.
-      const covered = characterCovers.length > 0;
-      const searchName = covered ? characterCovers.map((cover) => nameText(cover.name)) : names;
-      const searchExtra = covered ? [...names, ...extras] : extras;
-      search.push({ collection, id, name: searchName.join(" "), extra: searchExtra.filter(Boolean).join(" ") });
+      // A covered character's real name is a spoiler, so spoiler-safe search only sees the cover name in force.
+      let from: number | null = null;
+      for (const cover of characterCovers) {
+        const coverNames = [nameText(cover.name), cover.label_es ?? ""].filter(Boolean);
+        search.push({ collection, id, cover: true, from_chapter: from, until_chapter: cover.until, name: coverNames.join(" "), extra: "" });
+        from = cover.until + 1;
+      }
+      search.push({
+        collection,
+        id,
+        cover: false,
+        from_chapter: from,
+        until_chapter: null,
+        name: names.join(" "),
+        extra: extras.filter(Boolean).join(" "),
+      });
 
       for (const field of ["canon", "kind", "status", "gender", "blood_type", "type", "sub_type", "region"]) {
         facet(collection, record.slug, field, record[field]);
