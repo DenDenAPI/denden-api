@@ -467,7 +467,15 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     if (!(field in copy)) continue;
     const value = copy[field];
     if (field === "status" && isRevealed(copy.status_revealed_chapter)) continue;
-    if (field === "origin" && isRevealed((value as { revealed_chapter?: number }).revealed_chapter)) continue;
+    if (field === "origin") {
+      const origin = value as { region?: string; revealed_chapter?: number; region_revealed_chapter?: number };
+      if (isRevealed(origin.revealed_chapter)) continue;
+      // The region alone, while the place is still unknown.
+      if (origin.region && isRevealed(origin.region_revealed_chapter)) {
+        copy.origin = { region: origin.region, region_revealed_chapter: origin.region_revealed_chapter };
+        continue;
+      }
+    }
     if (Array.isArray(value)) {
       const items = value as { revealed_chapter?: number; canon?: string; status?: string; cover_until?: number }[];
       // The current/former status can reveal a later departure, so it stays hidden.

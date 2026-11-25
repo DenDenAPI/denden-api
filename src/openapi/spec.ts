@@ -81,6 +81,11 @@ const RESPONSE_OVERRIDES: Record<CollectionName, JsonSchema> = {
         location: REF,
         region: { type: "string" },
         revealed_chapter: { type: "integer", minimum: 0 },
+        region_revealed_chapter: {
+          type: "integer",
+          minimum: 0,
+          description: "Chapter from which the region is known, before the place itself.",
+        },
       },
       additionalProperties: false,
     },

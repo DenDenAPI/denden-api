@@ -199,6 +199,21 @@ describe("validateDataset", () => {
     expect(issues).toContain('characters/first-character: cover alias "Hood" ends before it is revealed');
   });
 
+  it("rejects a region chapter without a place or after the origin chapter", () => {
+    const root = dataset();
+    write(root, "characters", "first-character", {
+      slug: "first-character",
+      name: { en: "First Character" },
+      canon: "manga",
+      status: "alive",
+      first_appearance: { chapter: 1 },
+      origin: { region: "East Blue", revealed_chapter: 1, region_revealed_chapter: 1 },
+    });
+    const { issues } = validateDataset(root);
+    expect(issues).toContain("characters/first-character: origin region chapter needs both a region and a place");
+    expect(issues).toContain("characters/first-character: origin region chapter must come before the origin chapter");
+  });
+
   it("rejects a cycle between parent locations", () => {
     const root = dataset();
     for (const [slug, parent] of [["island-a", "island-b"], ["island-b", "island-a"]] as const) {

@@ -71,6 +71,8 @@ export const CharacterSchema = z.strictObject({
       location: SlugSchema.optional(),
       region: z.string().min(1).optional(),
       revealed_chapter: RevealedChapterSchema.optional(),
+      // The region can be known before the place: it is shown alone from this chapter.
+      region_revealed_chapter: RevealedChapterSchema.optional(),
     })
     .optional(),
   residences: z.array(EntityRefSchema).min(1).optional(),
