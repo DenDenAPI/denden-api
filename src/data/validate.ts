@@ -273,18 +273,27 @@ function checkCharacters(
       ].map((item) => item.revealed_chapter),
     ].filter((chapter) => chapter !== undefined);
     const debut = character.first_appearance?.chapter;
+    const endOf = (alias: { cover_until?: number | undefined; cover_always?: true | undefined }) =>
+      alias.cover_always ? Infinity : (alias.cover_until as number);
     const covers = (character.aliases ?? [])
-      .filter((alias) => alias.cover_until !== undefined)
-      .sort((a, b) => (a.cover_until as number) - (b.cover_until as number));
+      .filter((alias) => alias.cover_until !== undefined || alias.cover_always)
+      .sort((a, b) => endOf(a) - endOf(b));
     // Cover names follow one another: each starts after the previous one ends.
     covers.forEach((cover, index) => {
       const previous = covers[index - 1];
-      if (previous && cover.revealed_chapter !== undefined && cover.revealed_chapter <= (previous.cover_until as number)) {
+      if (previous && cover.revealed_chapter !== undefined && cover.revealed_chapter <= endOf(previous)) {
         issues.push(`${label}: cover alias "${cover.en}" starts before "${previous.en}" ends`);
       }
     });
     for (const cover of covers) {
-      const until = cover.cover_until as number;
+      if (cover.cover_always && cover.cover_until !== undefined) {
+        issues.push(`${label}: cover alias "${cover.en}" cannot both end and last forever`);
+      }
+      if (cover.cover_until === undefined) {
+        if (cover.revealed_chapter === undefined) issues.push(`${label}: cover alias "${cover.en}" needs a revealed chapter`);
+        continue;
+      }
+      const until = cover.cover_until;
       if (cover.revealed_chapter === undefined) {
         issues.push(`${label}: cover alias "${cover.en}" needs a revealed chapter`);
       } else if (until < cover.revealed_chapter) {

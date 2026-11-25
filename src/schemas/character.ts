@@ -39,9 +39,11 @@ export const SpeciesSchema = z.enum([
 /**
  * `cover_until` marks a false or provisional name (Klahadore, Kyoshiro): until that chapter the reader
  * knows the character only by this alias, so spoiler-filtered responses show it as the name.
+ * `cover_always` marks one the story never replaces (Mr. 5, whose real name only a databook gives).
  */
 const AliasSchema = RevealedNameSchema.extend({
   cover_until: RevealedChapterSchema.optional(),
+  cover_always: z.literal(true).optional(),
 });
 
 export const CharacterSchema = z.strictObject({

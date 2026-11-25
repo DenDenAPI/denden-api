@@ -142,6 +142,15 @@ const dataset: Dataset = {
         { en: "Shadow", revealed_chapter: 8, cover_until: 8 },
       ],
     },
+    {
+      // The story only ever calls this agent "Mr. 7"; the real name comes from a databook.
+      slug: "agent",
+      name: { en: "Agent" },
+      canon: "manga",
+      status: "alive",
+      first_appearance: { chapter: 8 },
+      aliases: [{ en: "Mr. 7", revealed_chapter: 8, cover_always: true }],
+    },
   ],
 };
 
@@ -386,7 +395,7 @@ describe("REST API", () => {
   it("publishes an OpenAPI document covering every resource", async () => {
     const spec = await json("/api/v1/openapi.json");
     expect(spec.openapi).toBe("3.1.0");
-    expect(spec.info["x-dataset"].counts.characters).toBe(4);
+    expect(spec.info["x-dataset"].counts.characters).toBe(5);
     for (const collection of COLLECTIONS) {
       expect(spec.paths[`/api/v1/${collection}`]).toBeDefined();
       expect(spec.paths[`/api/v1/${collection}/{id}`]).toBeDefined();
@@ -561,9 +570,9 @@ describe("spoiler filter", () => {
 
   it("uses the cover name in lists, sorting, references and search", async () => {
     const names = async (path: string) => (await json(path)).results.map((item: { name: string }) => item.name);
-    expect(await names("/api/v1/characters?until_chapter=8")).toEqual(["Hero", "Mate", "Shadow", "Villain"]);
-    expect(await names("/api/v1/characters?until_chapter=9")).toEqual(["Hero", "Mask", "Mate", "Villain"]);
-    expect(await names("/api/v1/characters?until_chapter=10")).toEqual(["Hero", "Mate", "Villain", "Zed"]);
+    expect(await names("/api/v1/characters?until_chapter=8")).toEqual(["Hero", "Mate", "Mr. 7", "Shadow", "Villain"]);
+    expect(await names("/api/v1/characters?until_chapter=9")).toEqual(["Hero", "Mask", "Mate", "Mr. 7", "Villain"]);
+    expect(await names("/api/v1/characters?until_chapter=10")).toEqual(["Hero", "Mate", "Mr. 7", "Villain", "Zed"]);
 
     const crew = await json("/api/v1/crews/test-pirates?until_chapter=9");
     expect(crew.captains.map((item: { name: string }) => item.name)).toContain("Mask");
@@ -577,6 +586,16 @@ describe("spoiler filter", () => {
     expect((await json("/api/v1/search?q=shadow&until_chapter=9")).count).toBe(0);
     expect(await names("/api/v1/search?q=zed&until_chapter=10")).toEqual(["Zed"]);
     expect(await names("/api/v1/search?q=shadow")).toEqual(["Zed"]);
+  });
+
+  it("keeps a cover name the story never replaces", async () => {
+    const covered = await json("/api/v1/characters/agent?until_chapter=10");
+    expect(covered.name).toEqual({ en: "Mr. 7", label: "Mr. 7" });
+    expect(covered.aliases).toBeUndefined();
+    expect((await json("/api/v1/search?q=agent&until_chapter=10")).count).toBe(0);
+    const full = await json("/api/v1/characters/agent");
+    expect(full.name.en).toBe("Agent");
+    expect(full.aliases[0].cover_always).toBe(true);
   });
 
   it("translates a descriptive cover name", async () => {

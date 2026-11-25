@@ -34,11 +34,15 @@ export interface CoverRow {
   sort_name_es: string;
 }
 
+/** End given to a cover the story never replaces: later than any chapter. */
+export const COVER_ALWAYS = 1_000_000;
+
 function coversOf(record: Loose, glossary: Glossary | undefined): Cover[] {
   return ((record.aliases ?? []) as Loose[])
-    .filter((item) => item.cover_until !== undefined)
-    .map(({ revealed_chapter: _revealed, cover_until: until, ...name }) => {
+    .filter((item) => item.cover_until !== undefined || item.cover_always)
+    .map(({ revealed_chapter: _revealed, cover_until: coverUntil, cover_always: always, ...name }) => {
       const [labelEs] = translatedForms(glossary, "aliases", name.en);
+      const until = always ? COVER_ALWAYS : (coverUntil as number);
       return { name: name as Cover["name"], until, ...(labelEs ? { label_es: labelEs } : {}) };
     })
     .sort((a, b) => a.until - b.until);
