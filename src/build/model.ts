@@ -313,6 +313,9 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
                   ...(record.origin.revealed_chapter !== undefined
                     ? { revealed_chapter: record.origin.revealed_chapter }
                     : {}),
+                  ...(record.origin.region_revealed_chapter !== undefined
+                    ? { region_revealed_chapter: record.origin.region_revealed_chapter }
+                    : {}),
                 },
               }
             : {}),

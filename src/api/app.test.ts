@@ -125,6 +125,8 @@ const dataset: Dataset = {
       gender: "female",
       status: "deceased",
       first_appearance: { chapter: 7 },
+      // The region is known from the debut; the island itself is never revealed in a chapter.
+      origin: { location: "test-island", region: "East Blue", region_revealed_chapter: 7 },
       bounties: [{ amount: 500, status: "current", revealed_chapter: 7 }],
     },
     {
@@ -503,6 +505,18 @@ describe("spoiler filter", () => {
     expect(later.origin.region).toBe("East Blue");
     expect(early.ages).toBeUndefined();
     expect(later.ages).toEqual([{ years: 38, period: { id: "other", label: "Other" }, revealed_chapter: 3 }]);
+  });
+
+  it("shows the region of origin alone while the place is still hidden", async () => {
+    const filtered = await json("/api/v1/characters/villain?until_chapter=8");
+    expect(filtered.origin).toEqual({ region: "East Blue", region_revealed_chapter: 7 });
+
+    const spanish = await json("/api/v1/characters/villain?until_chapter=8&lang=es");
+    expect(spanish.origin).toEqual({ region: "Mar del Este", region_revealed_chapter: 7 });
+
+    const full = await json("/api/v1/characters/villain");
+    expect(full.origin.location.url).toMatch(/\/api\/v1\/locations\/test-island/);
+    expect(full.origin.region_revealed_chapter).toBe(7);
   });
 
   it("does not reveal what a record hides through the filter metadata", async () => {

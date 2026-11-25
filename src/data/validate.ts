@@ -250,9 +250,19 @@ function checkCharacters(
         issues.push(`${label}: unknown bounty chapter ${bounty.revealed_chapter}`);
       }
     }
+    const origin = character.origin;
+    if (origin?.region_revealed_chapter !== undefined) {
+      if (!origin.region || !origin.location) {
+        issues.push(`${label}: origin region chapter needs both a region and a place`);
+      }
+      if (origin.revealed_chapter !== undefined && origin.revealed_chapter <= origin.region_revealed_chapter) {
+        issues.push(`${label}: origin region chapter must come before the origin chapter`);
+      }
+    }
     const revealed = [
       character.status_revealed_chapter,
-      character.origin?.revealed_chapter,
+      origin?.revealed_chapter,
+      origin?.region_revealed_chapter,
       ...[
         ...(character.epithets ?? []),
         ...(character.aliases ?? []),
