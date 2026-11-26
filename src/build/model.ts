@@ -381,7 +381,8 @@ export function buildOutput(dataset: Dataset, attribution: Attribution, glossary
 
       const bounties: Loose[] = record.bounties ?? [];
       // Deceased characters keep their last bounty, which the source marks as former.
-      const latestBounty = bounties.filter((item) => !item.canon).at(-1);
+      // "No bounty" entries are not a bounty, so they never count for sorting.
+      const latestBounty = bounties.filter((item) => !item.canon && !item.none).at(-1);
       const characterCovers = collection === "characters" ? coversOf(record, glossary) : [];
       if (characterCovers.length > 0) covers[id] = characterCovers;
       for (const { name: coverName, until, label_es: labelEs } of characterCovers) {

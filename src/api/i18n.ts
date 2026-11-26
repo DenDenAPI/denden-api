@@ -103,6 +103,8 @@ export const CODE_LABELS = {
     member: "Member",
     rank: "Rank",
     service: "Service",
+    base: "Base",
+    passenger: "Passenger",
   },
   arc_kinds: { cover_story: "Cover story", filler: "Filler", special: "Special", story: "Story" },
   episode_kinds: { regular: "Regular", special: "Special" },
@@ -250,8 +252,10 @@ export function localizeBody(collection: CollectionName, body: Json, glossary: T
     copy.region = translate(glossary, "regions", copy.region);
   }
   if (collection === "characters") {
-    if (Array.isArray(copy.occupations)) {
-      copy.occupations = (copy.occupations as { name: string }[]).map((item) => ({
+    // Social ranks share the occupations glossary ("World Noble", "Slave").
+    for (const field of ["occupations", "social_ranks"]) {
+      if (!Array.isArray(copy[field])) continue;
+      copy[field] = (copy[field] as { name: string }[]).map((item) => ({
         ...item,
         name: translate(glossary, "occupations", item.name, female),
       }));

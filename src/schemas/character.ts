@@ -67,6 +67,18 @@ export const CharacterSchema = z.strictObject({
     )
     .min(1)
     .optional(),
+  /** Social standing, apart from jobs: local nobility, World Noble, slave. */
+  social_ranks: z
+    .array(
+      z.strictObject({
+        name: z.string().min(1),
+        status: z.enum(["current", "former"]),
+        revealed_chapter: RevealedChapterSchema.optional(),
+      }),
+    )
+    .min(1)
+    .optional()
+    .describe("Social standing, apart from jobs: local nobility (Noble), World Noble or Slave."),
   affiliations: z.array(EntityRefSchema).min(1).optional(),
   origin: z
     .strictObject({
@@ -120,10 +132,18 @@ export const CharacterSchema = z.strictObject({
         amount: z.number().int().nonnegative(),
         status: z.enum(["current", "former"]),
         minimum: z.literal(true).optional(),
+        // No bounty at all (Teach before his first one), stored as amount 0.
+        none: z
+          .literal(true)
+          .optional()
+          .describe('No bounty at all ("sin recompensa"). The amount is 0 and it never counts for sorting.'),
         revealed_chapter: z.number().int().nonnegative().optional(),
         canon: CanonSchema.optional(),
       }),
     )
+    .refine((items) => items.every((item) => !item.none || item.amount === 0), {
+      message: "a bounty marked none must have amount 0",
+    })
     .min(1)
     .optional(),
   /** Marine star rating. It is a threat level, not a bounty. */

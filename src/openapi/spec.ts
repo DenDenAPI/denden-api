@@ -4,6 +4,7 @@ import { COLLECTIONS, RESOURCES, type CollectionName } from "../api/resources.js
 import { ArcSchema } from "../schemas/arc.js";
 import { ChapterSchema } from "../schemas/chapter.js";
 import { CharacterSchema } from "../schemas/character.js";
+import { RelationKindSchema } from "../schemas/common.js";
 import { CrewSchema } from "../schemas/crew.js";
 import { DevilFruitSchema } from "../schemas/devil-fruit.js";
 import { EpisodeSchema } from "../schemas/episode.js";
@@ -55,10 +56,7 @@ const REF = component("Reference");
 const REFS = arrayOf("Reference");
 const RELATIONS = arrayOf("RelationReference");
 const ENTITIES = arrayOf("EntityReference");
-const RELATION_KIND = {
-  type: "string",
-  enum: ["member", "rank", "captivity", "alliance", "collaboration", "family", "guardianship", "service"],
-};
+const RELATION_KIND = { type: "string", enum: RelationKindSchema.options };
 
 const RESPONSE_OVERRIDES: Record<CollectionName, JsonSchema> = {
   sagas: {},
@@ -146,7 +144,7 @@ function responseSchema(collection: CollectionName): JsonSchema {
   const redacted = new Set<string>(RESOURCES[collection].redact);
   schema.required = ["url", ...(schema.required as string[]).filter((name) => !redacted.has(name))];
 
-  for (const field of ["bounties", "occupations"]) {
+  for (const field of ["bounties", "occupations", "social_ranks"]) {
     const items = schema.properties[field]?.items as JsonSchema | undefined;
     if (items?.required) {
       // The current/former status is hidden while a spoiler filter is active.

@@ -136,6 +136,7 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       "epithets",
       "aliases",
       "occupations",
+      "social_ranks",
       "affiliations",
       "origin",
       "residences",
