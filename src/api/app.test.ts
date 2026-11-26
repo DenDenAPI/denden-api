@@ -116,6 +116,11 @@ const dataset: Dataset = {
       occupations: [{ name: "Cook", status: "former", revealed_chapter: 2 }],
       origin: { region: "East Blue", revealed_chapter: 3 },
       ages: [{ years: 38, period: "other", revealed_chapter: 3 }],
+      // Known from books: an SBS in chapter 3 and a databook in chapter 8.
+      heights: [{ cm: 170, period: "other", revealed_chapter: 3 }],
+      birthday: { month: 3, day: 2, revealed_chapter: 3 },
+      blood_type: "F",
+      blood_type_revealed_chapter: 8,
       affiliations: [{ type: "crew", slug: "test-pirates", status: "former", revealed_chapter: 2 }],
     },
     {
@@ -500,6 +505,31 @@ describe("spoiler filter", () => {
     expect(before.ages).toEqual([{ years: 17, period: { id: "debut", label: "Debut" } }]);
     expect(before.heights).toBeUndefined();
     expect(before.spoiler_filter.redacted).toEqual(expect.arrayContaining(["ages", "heights"]));
+  });
+
+  it("shows heights, birthdays and blood types from the chapter that reveals them", async () => {
+    const early = await json("/api/v1/characters/mate?until_chapter=2");
+    expect(early.heights).toBeUndefined();
+    expect(early.birthday).toBeUndefined();
+    expect(early.blood_type).toBeUndefined();
+    expect(early.spoiler_filter.redacted).toEqual(expect.arrayContaining(["birthday", "blood_type", "heights"]));
+
+    const middle = await json("/api/v1/characters/mate?until_chapter=3");
+    expect(middle.heights).toEqual([{ cm: 170, period: { id: "other", label: "Other" }, revealed_chapter: 3 }]);
+    expect(middle.birthday).toEqual({ month: 3, day: 2, revealed_chapter: 3 });
+    expect(middle.blood_type).toBeUndefined();
+
+    const later = await json("/api/v1/characters/mate?until_chapter=8");
+    expect(later.blood_type).toEqual({ id: "F", label: "F" });
+    expect(later.blood_type_revealed_chapter).toBeUndefined();
+
+    const full = await json("/api/v1/characters/mate");
+    expect(full.blood_type_revealed_chapter).toBe(8);
+  });
+
+  it("does not filter by blood type under the spoiler filter", async () => {
+    const response = await request("/api/v1/characters?blood_type=F&until_chapter=8");
+    expect(response.status).toBe(400);
   });
 
   it("keeps values already revealed at the chapter", async () => {

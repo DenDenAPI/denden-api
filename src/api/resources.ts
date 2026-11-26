@@ -123,7 +123,7 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       canon: safe,
       gender: safe,
       species: safe,
-      blood_type: safe,
+      blood_type: unsafe,
       status: unsafe,
       crew: unsafe,
       organization: unsafe,
@@ -141,6 +141,8 @@ export const RESOURCES: Record<CollectionName, ResourceDefinition> = {
       "residences",
       "devil_fruits",
       "marine_rating",
+      "birthday",
+      "blood_type",
     ],
     // "name" may show a cover name (Kyoshiro) instead of the real one while it is a spoiler.
     timelineFields: ["name", "bounties", "ages", "heights"],
