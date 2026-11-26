@@ -78,16 +78,20 @@ export const CharacterSchema = z.strictObject({
     })
     .optional(),
   residences: z.array(EntityRefSchema).min(1).optional(),
+  // Birthdays and blood types usually come from an SBS or a databook: `revealed_chapter` is the last
+  // chapter out when that book was published.
   birthday: z
     .strictObject({
       month: z.number().int().min(1).max(12),
       day: z.number().int().min(1).max(31),
+      revealed_chapter: RevealedChapterSchema.optional(),
     })
     .refine(({ month, day }) => day <= (DAYS_IN_MONTH[month - 1] ?? 0), {
       message: "invalid day for month",
     })
     .optional(),
   blood_type: z.enum(["F", "S", "X", "XF"]).optional(),
+  blood_type_revealed_chapter: RevealedChapterSchema.optional(),
   ages: z
     .array(
       z.strictObject({
@@ -100,7 +104,13 @@ export const CharacterSchema = z.strictObject({
     .min(1)
     .optional(),
   heights: z
-    .array(z.strictObject({ cm: z.number().int().positive(), period: PeriodSchema }))
+    .array(
+      z.strictObject({
+        cm: z.number().int().positive(),
+        period: PeriodSchema,
+        revealed_chapter: RevealedChapterSchema.optional(),
+      }),
+    )
     .min(1)
     .optional(),
   /** Ordered from oldest to newest. */

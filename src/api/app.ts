@@ -474,6 +474,8 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     if (!(field in copy)) continue;
     const value = copy[field];
     if (field === "status" && isRevealed(copy.status_revealed_chapter)) continue;
+    if (field === "blood_type" && isRevealed(copy.blood_type_revealed_chapter)) continue;
+    if (field === "birthday" && isRevealed((value as { revealed_chapter?: number }).revealed_chapter)) continue;
     if (field === "origin") {
       const origin = value as { region?: string; revealed_chapter?: number; region_revealed_chapter?: number };
       if (isRevealed(origin.revealed_chapter)) continue;
@@ -503,6 +505,7 @@ function redact(definition: ResourceDefinition, body: Json, maxChapter: number):
     delete copy[field];
   }
   delete copy.status_revealed_chapter;
+  delete copy.blood_type_revealed_chapter;
 
   if (Array.isArray(copy.bounties)) {
     const bounties = copy.bounties as { revealed_chapter?: number; canon?: string; status: string }[];

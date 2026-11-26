@@ -259,8 +259,13 @@ function checkCharacters(
         issues.push(`${label}: origin region chapter must come before the origin chapter`);
       }
     }
+    if (character.blood_type_revealed_chapter !== undefined && character.blood_type === undefined) {
+      issues.push(`${label}: blood type chapter without a blood type`);
+    }
     const revealed = [
       character.status_revealed_chapter,
+      character.blood_type_revealed_chapter,
+      character.birthday?.revealed_chapter,
       origin?.revealed_chapter,
       origin?.region_revealed_chapter,
       ...[
@@ -270,6 +275,7 @@ function checkCharacters(
         ...(character.affiliations ?? []),
         ...(character.residences ?? []),
         ...(character.ages ?? []),
+        ...(character.heights ?? []),
       ].map((item) => item.revealed_chapter),
     ].filter((chapter) => chapter !== undefined);
     const debut = character.first_appearance?.chapter;
