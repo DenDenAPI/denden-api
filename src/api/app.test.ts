@@ -114,6 +114,7 @@ const dataset: Dataset = {
       first_appearance: { chapter: 2 },
       aliases: [{ en: "Early Alias", revealed_chapter: 2 }, { en: "Late Alias", revealed_chapter: 8 }, { en: "Unknown Alias" }],
       occupations: [{ name: "Cook", status: "former", revealed_chapter: 2 }],
+      social_ranks: [{ name: "Noble", status: "former", revealed_chapter: 3 }],
       origin: { region: "East Blue", revealed_chapter: 3 },
       ages: [{ years: 38, period: "other", revealed_chapter: 3 }],
       // Known from books: an SBS in chapter 3 and a databook in chapter 8.
@@ -132,7 +133,13 @@ const dataset: Dataset = {
       first_appearance: { chapter: 7 },
       // The region is known from the debut; the island itself is never revealed in a chapter.
       origin: { location: "test-island", region: "East Blue", region_revealed_chapter: 7 },
-      bounties: [{ amount: 500, status: "current", revealed_chapter: 7 }],
+      // No bounty at first, then a real one.
+      bounties: [
+        { amount: 0, status: "former", none: true, revealed_chapter: 7 },
+        { amount: 500, status: "current", revealed_chapter: 7 },
+      ],
+      // Travels with the crew without being a member.
+      affiliations: [{ type: "crew", slug: "test-pirates", status: "former", kind: "passenger", revealed_chapter: 7 }],
     },
     {
       // Seen unnamed as "Shadow" in chapter 8, called "Mask" in chapter 9; the real name is revealed in chapter 10.
@@ -175,7 +182,8 @@ const json = async (path: string) => (await request(path)).json() as Promise<Rec
 
 beforeAll(() => {
   const glossary: Glossary = {
-    occupations: { Cook: ["Cocinero", "Cocinera"] },
+    occupations: { Cook: ["Cocinero", "Cocinera"], Noble: ["Noble", "Noble"] },
+    relation_kinds: { passenger: ["Pasajero", "Pasajera"] },
     epithets: {},
     aliases: { "Early Alias": "Alias temprano", "Late Alias": "Alias tardío", Shadow: "Sombra" },
     fruit_meanings: {},
@@ -525,6 +533,29 @@ describe("spoiler filter", () => {
 
     const full = await json("/api/v1/characters/mate");
     expect(full.blood_type_revealed_chapter).toBe(8);
+  });
+
+  it("shows social ranks from the chapter that reveals them, translated", async () => {
+    expect((await json("/api/v1/characters/mate?until_chapter=2")).social_ranks).toBeUndefined();
+    const later = await json("/api/v1/characters/mate?until_chapter=3&lang=es");
+    expect(later.social_ranks).toEqual([{ name: "Noble", revealed_chapter: 3 }]);
+    expect(later.spoiler_filter.redacted).toContain("social_ranks");
+    const full = await json("/api/v1/characters/mate");
+    expect(full.social_ranks[0].status).toEqual({ id: "former", label: "Former" });
+  });
+
+  it("marks a missing bounty and keeps it out of the bounty sort", async () => {
+    const villain = await json("/api/v1/characters/villain");
+    expect(villain.bounties[0]).toMatchObject({ amount: 0, none: true });
+    const sorted = await json("/api/v1/characters?sort=-bounty");
+    expect(sorted.results[0].name).toBe("Hero");
+  });
+
+  it("labels passengers and bases as relation kinds", async () => {
+    const villain = await json("/api/v1/characters/villain?lang=es");
+    expect(villain.affiliations[0].kind).toEqual({ id: "passenger", label: "Pasajera" });
+    const labels = await json("/api/v1/labels");
+    expect(labels.relation_kinds.base.generic).toBe("Base");
   });
 
   it("does not filter by blood type under the spoiler filter", async () => {

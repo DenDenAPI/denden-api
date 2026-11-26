@@ -70,7 +70,11 @@ export const RelationKindSchema = z.enum([
   "family",
   "guardianship",
   "service",
-]);
+  // A place used as a base (Buggy in Orange Town, Vegapunk on Punk Hazard). Mostly on residences.
+  "base",
+  // Travels with a crew without being a member (Toki with the Roger Pirates).
+  "passenger",
+]).describe("How the character is linked: base and captivity are used on residences, passenger on crews.");
 
 export const EntityRefSchema = z.strictObject({
   type: z.enum(["crew", "organization", "location"]),

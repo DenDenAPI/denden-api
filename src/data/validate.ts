@@ -272,6 +272,7 @@ function checkCharacters(
         ...(character.epithets ?? []),
         ...(character.aliases ?? []),
         ...(character.occupations ?? []),
+        ...(character.social_ranks ?? []),
         ...(character.affiliations ?? []),
         ...(character.residences ?? []),
         ...(character.ages ?? []),
